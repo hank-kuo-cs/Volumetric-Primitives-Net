@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 from torchvision.models import resnet18
-from config import CUBOID_NUM, SPHERE_NUM, CONE_NUM, VP_CLAMP_MAX, VP_CLAMP_MIN
+from config import CUBOID_NUM, SPHERE_NUM, CONE_NUM, VP_CLAMP_MAX, VP_CLAMP_MIN, IS_DROPOUT
 
 sigmoid = nn.Sigmoid()
 tanh = nn.Tanh()
@@ -58,7 +58,7 @@ class VPNet(nn.Module):
         # cuboid: w, h, d, rotate(4), translate(3) -> 10
         # sphere: r(3), rotate(4), translate(3) -> 10
         # cone: r(2), h, rotate(4), translate(3) -> 10
-        return nn.Sequential(
+        dropout_layers = nn.Sequential(
             nn.Linear(512, 1024),
             nn.Dropout(),
             nn.Linear(1024, 1024),
@@ -69,6 +69,14 @@ class VPNet(nn.Module):
             nn.Dropout(),
             nn.Linear(1024, output_dim),
         )
+        layers = nn.Sequential(
+            nn.Linear(512, 1024),
+            nn.Linear(1024, 1024),
+            nn.Linear(1024, 1024),
+            nn.Linear(1024, 1024),
+            nn.Linear(1024, output_dim),
+        )
+        return dropout_layers if IS_DROPOUT else layers
 
     @staticmethod
     def _make_avg_pool():
