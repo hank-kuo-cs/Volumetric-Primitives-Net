@@ -60,9 +60,13 @@ class VPNet(nn.Module):
         # cone: r(2), h, rotate(4), translate(3) -> 10
         return nn.Sequential(
             nn.Linear(512, 1024),
+            nn.Dropout(),
             nn.Linear(1024, 1024),
+            nn.Dropout(),
             nn.Linear(1024, 1024),
+            nn.Dropout(),
             nn.Linear(1024, 1024),
+            nn.Dropout(),
             nn.Linear(1024, output_dim),
         )
 

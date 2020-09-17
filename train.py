@@ -1,4 +1,5 @@
 import os
+import random
 import torch
 from tqdm import tqdm
 from torch.utils.data import DataLoader
@@ -6,6 +7,8 @@ from torch.optim import Adam
 from modules import VPNet, ShapeNetDataset, Sampling, ChamferDistanceLoss, Meshing, Visualizer
 from config import *
 
+
+random.seed(1234)
 os.environ['CUDA_VISIBLE_DEVICES'] = DEVICE_NUM
 
 print('Load dataset...')
