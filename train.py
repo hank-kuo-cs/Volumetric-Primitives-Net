@@ -7,11 +7,16 @@ from torch.optim import Adam
 from modules import VPNet, ShapeNetDataset, Sampling, ChamferDistanceLoss, Meshing, Visualizer
 from config import *
 
+manual_seed = 1234
+random.seed(manual_seed)
+torch.manual_seed(manual_seed)
 
-random.seed(0)
-torch.manual_seed(0)
+if DEVICE != 'cpu':
+    os.environ['CUDA_VISIBLE_DEVICES'] = DEVICE_NUM
+    torch.cuda.manual_seed(manual_seed)
+    torch.cuda.manual_seed_all(manual_seed)
 
-os.environ['CUDA_VISIBLE_DEVICES'] = DEVICE_NUM
+torch.backends.cudnn.deterministic = True
 
 print('Load dataset...')
 train_dataset = ShapeNetDataset('train')
@@ -19,7 +24,7 @@ train_dataloader = DataLoader(dataset=train_dataset, batch_size=BATCH_SIZE, shuf
 print('Dataset size =', len(train_dataset))
 
 model = VPNet().to(DEVICE)
-optimizer = Adam(params=model.parameters(), lr=LR)
+optimizer = Adam(params=model.parameters(), lr=LR, betas=(0.9, 0.99))
 cd_loss_func = ChamferDistanceLoss()
 vp_num = CUBOID_NUM + SPHERE_NUM + CONE_NUM
 

@@ -33,7 +33,7 @@ class VPNet(nn.Module):
         out = self._model.avgpool(out)
         features = out.view(out.size(0), -1)
 
-        volumes = torch.clamp(self._model.volume(features), min=VP_CLAMP_MIN, max=VP_CLAMP_MAX)
+        volumes = torch.clamp(self._model.volume(features), min=VP_CLAMP_MIN + 1e-8, max=VP_CLAMP_MAX)
         rotates = torch.clamp(self._model.rotate(features), min=-1, max=1)
         translates = torch.clamp(self._model.translate(features), min=-1, max=1)
 
@@ -44,6 +44,9 @@ class VPNet(nn.Module):
         volumes = volumes.split(3, dim=1)
         rotates = rotates.split(4, dim=1)
         translates = translates.split(3, dim=1)
+
+        for i in range(len(volumes)):
+            volumes[i][:, 2] = torch.div(volumes[i][:, 2], 4)
 
         # volumetric_primitives = []
         #
