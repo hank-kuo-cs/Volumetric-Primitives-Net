@@ -25,9 +25,10 @@ classes_str = ''
 for c in TRAIN_CLASSES:
     classes_str += c + '_'
 
-dir_path = EXPERIMENT_PATH + '/train/' + classes_str
+dir_path = os.path.join(EXPERIMENT_PATH, 'train', classes_str)
+checkpoint_path = os.path.join(EXPERIMENT_PATH, 'checkpoint')
 os.makedirs(dir_path, exist_ok=True)
-os.makedirs(EXPERIMENT_PATH + 'checkpoint', exist_ok=True)
+os.makedirs(checkpoint_path, exist_ok=True)
 
 for epoch_now in range(EPOCH_NUM):
     model.train()
@@ -74,6 +75,6 @@ for epoch_now in range(EPOCH_NUM):
         for b in range(BATCH_SIZE):
             img = imgs[b]
             vp_meshes = batch_vp_meshes[b]
-            Visualizer.render_vp_meshes(img, vp_meshes, dir_path + '/epoch%d-%d.png' % (epoch_now+1, b))
+            Visualizer.render_vp_meshes(img, vp_meshes, os.path.join(dir_path, 'epoch%d-%d.png' % (epoch_now+1, b)))
 
-        torch.save(model.state_dict(), EXPERIMENT_PATH + 'checkpoint/model_epoch%03d.pth' % (epoch_now + 1))
+        torch.save(model.state_dict(), os.path.join(checkpoint_path, 'model_epoch%03d.pth' % (epoch_now + 1)))

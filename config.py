@@ -6,14 +6,14 @@ DEVICE_NUM = '6'
 LR = 1e-4
 SAMPLE_NUM = 200
 BATCH_SIZE = 4
-EPOCH_NUM = 100
+EPOCH_NUM = 50
 CD_W1 = 1.0
-CD_W2 = 0.5
-VP_CLAMP_MIN = 0.1
-VP_CLAMP_MAX = 0.8
+CD_W2 = 1.0
+VP_CLAMP_MIN = 0.0
+VP_CLAMP_MAX = 1.0
 
 # PATH
-EXPERIMENT_PATH = 'experiment/100_chairs/adam_batch4_lr1e-4_cd1and5e-1_sample200'
+EXPERIMENT_PATH = 'experiment/100_chairs'
 LITTLE_NUM = {'train': 100, 'test': 20}
 
 # Volumetric Primitives

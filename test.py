@@ -14,9 +14,13 @@ print('Load dataset...')
 test_dataset = ShapeNetDataset('test')
 test_dataloader = DataLoader(dataset=test_dataset, batch_size=BATCH_SIZE, shuffle=True, num_workers=4)
 print('Dataset size =', len(test_dataset))
-epoch = int(input('Use epoch ='))
 
-model = VPNet().to(DEVICE).load_state_dict(torch.load(EXPERIMENT_PATH + 'checkpoint/model_epoch%03d.pth' % epoch))
+epoch = int(input('Use epoch = '))
+checkpoint_path = os.path.join(EXPERIMENT_PATH, 'checkpoint')
+
+model = VPNet().to(DEVICE)
+model.load_state_dict(torch.load(os.path.join(checkpoint_path, '/model_epoch%03d.pth' % epoch)))
+
 cd_loss_func = ChamferDistanceLoss()
 vp_num = CUBOID_NUM + SPHERE_NUM + CONE_NUM
 
@@ -61,4 +65,4 @@ os.makedirs(dir_path, exist_ok=True)
 for b in range(BATCH_SIZE):
     img = imgs[b]
     vp_meshes = batch_vp_meshes[b]
-    Visualizer.render_vp_meshes(img, vp_meshes, dir_path + '/epoch%d-%d.png' % (epoch, b))
+    Visualizer.render_vp_meshes(img, vp_meshes, os.path.join(dir_path, '/epoch%d-%d.png' % (epoch, b)))
