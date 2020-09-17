@@ -16,7 +16,7 @@ test_dataloader = DataLoader(dataset=test_dataset, batch_size=BATCH_SIZE, shuffl
 print('Dataset size =', len(test_dataset))
 epoch = int(input('Use epoch ='))
 
-model = VPNet().to(DEVICE).load_state_dict(torch.load('checkpoint/model_epoch%03d.pth' % epoch))
+model = VPNet().to(DEVICE).load_state_dict(torch.load(EXPERIMENT_PATH + 'checkpoint/model_epoch%03d.pth' % epoch))
 cd_loss_func = ChamferDistanceLoss()
 vp_num = CUBOID_NUM + SPHERE_NUM + CONE_NUM
 

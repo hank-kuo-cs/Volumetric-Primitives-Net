@@ -2,7 +2,7 @@ import os
 import torch
 from ..transform import transform_points
 from config import DEVICE
-# from kaolin.rep import TriangleMesh
+from kaolin.rep import TriangleMesh
 
 
 def cuboid_meshing(v: torch.Tensor, q: torch.Tensor, t: torch.Tensor) -> list:
