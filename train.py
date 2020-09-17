@@ -8,7 +8,9 @@ from modules import VPNet, ShapeNetDataset, Sampling, ChamferDistanceLoss, Meshi
 from config import *
 
 
-random.seed(1234)
+random.seed(0)
+torch.manual_seed(0)
+
 os.environ['CUDA_VISIBLE_DEVICES'] = DEVICE_NUM
 
 print('Load dataset...')
@@ -57,7 +59,7 @@ for epoch_now in range(EPOCH_NUM):
         epoch_loss += cd_loss.item()
         progress_bar.set_description('CD Loss = %.6f' % cd_loss.item())
 
-    print('Epoch %d, avg loss = %.6f' % (epoch_now + 1, epoch_loss / n))
+    print('Epoch %d, avg loss = %.6f\n' % (epoch_now + 1, epoch_loss / n))
 
     # Record some result
     if (epoch_now + 1) % 5 == 0:
