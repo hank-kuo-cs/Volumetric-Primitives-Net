@@ -59,7 +59,7 @@ classes_str = ''
 for c in TEST_CLASSES:
     classes_str += c + '_'
 
-dir_path = EXPERIMENT_PATH + '/test/' + classes_str
+dir_path = os.path.join(EXPERIMENT_PATH, 'test', classes_str)
 os.makedirs(dir_path, exist_ok=True)
 
 for b in range(BATCH_SIZE):
