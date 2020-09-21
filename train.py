@@ -8,8 +8,7 @@ from modules import VPNet, ShapeNetDataset, Sampling, ChamferDistanceLoss, Meshi
 from config import *
 
 
-def set_seed():
-    manual_seed = 1234
+def set_seed(manual_seed=MANUAL_SEED):
     random.seed(manual_seed)
     torch.manual_seed(manual_seed)
 
