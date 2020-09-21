@@ -11,6 +11,7 @@ CD_W1 = 1.0
 CD_W2 = 1.0
 VP_CLAMP_MIN = 0.0
 VP_CLAMP_MAX = 1.0
+IS_DROPOUT = False
 
 # PATH
 EXPERIMENT_PATH = 'experiment/100_chairs'

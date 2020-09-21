@@ -7,9 +7,16 @@ from torch.optim import Adam
 from modules import VPNet, ShapeNetDataset, Sampling, ChamferDistanceLoss, Meshing, Visualizer
 from config import *
 
+manual_seed = 1234
+random.seed(manual_seed)
+torch.manual_seed(manual_seed)
 
-random.seed(1234)
-os.environ['CUDA_VISIBLE_DEVICES'] = DEVICE_NUM
+if DEVICE != 'cpu':
+    os.environ['CUDA_VISIBLE_DEVICES'] = DEVICE_NUM
+    torch.cuda.manual_seed(manual_seed)
+    torch.cuda.manual_seed_all(manual_seed)
+
+torch.backends.cudnn.deterministic = True
 
 print('Load dataset...')
 train_dataset = ShapeNetDataset('train')
@@ -17,7 +24,7 @@ train_dataloader = DataLoader(dataset=train_dataset, batch_size=BATCH_SIZE, shuf
 print('Dataset size =', len(train_dataset))
 
 model = VPNet().to(DEVICE)
-optimizer = Adam(params=model.parameters(), lr=LR)
+optimizer = Adam(params=model.parameters(), lr=LR, betas=(0.9, 0.99))
 cd_loss_func = ChamferDistanceLoss()
 vp_num = CUBOID_NUM + SPHERE_NUM + CONE_NUM
 
@@ -57,7 +64,7 @@ for epoch_now in range(EPOCH_NUM):
         epoch_loss += cd_loss.item()
         progress_bar.set_description('CD Loss = %.6f' % cd_loss.item())
 
-    print('Epoch %d, avg loss = %.6f' % (epoch_now + 1, epoch_loss / n))
+    print('Epoch %d, avg loss = %.6f\n' % (epoch_now + 1, epoch_loss / n))
 
     # Record some result
     if (epoch_now + 1) % 5 == 0:
