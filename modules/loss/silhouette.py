@@ -14,7 +14,7 @@ class SilhouetteLoss(nn.Module):
         predict_silhouettes = []
         for i in range(len(predict_meshes)):
             _, predict_silhouette, _ = Renderer.render(predict_meshes[i], dists[i], elevs[i], azims[i])
-            predict_silhouettes.append(predict_silhouette)
+            predict_silhouettes.append(predict_silhouette.permute(0, 3, 1, 2))
 
         predict_silhouettes = torch.cat(predict_silhouettes)
 

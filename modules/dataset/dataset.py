@@ -100,7 +100,7 @@ class ShapeNetDataset(Dataset):
     def _load_rgb_and_silhouette(img_path: str) -> (torch.Tensor, torch.Tensor):
         img = Image.open(img_path)
         img = img_transform(img)
-        rgb, silhouette = img[:3], img[3]
+        rgb, silhouette = img[:3], img[3].unsqueeze(0)
 
         if IS_NORMALIZE:
             rgb = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])(rgb)
