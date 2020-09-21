@@ -2,7 +2,7 @@
 DEVICE = 'cuda'
 DEVICE_NUM = '6'
 
-# HYPER PARAMETER
+# Hyper parameter
 LR = 1e-4
 SAMPLE_NUM = 200
 BATCH_SIZE = 8
@@ -12,6 +12,9 @@ CD_W2 = 0.5
 L_CD = 1.0
 L_SIL = 0.01
 
+# Dataset
+IS_NORMALIZE = False
+
 # Network
 VP_CLAMP_MIN = 0.0
 VP_CLAMP_MAX = 1.0
@@ -19,7 +22,7 @@ IS_DROPOUT = False
 IS_DEPTH_RESTRICT = False
 SILHOUETTE_LOSS_FUNC = 'L1'
 
-# PATH
+# Path
 EXPERIMENT_PATH = 'experiment/100_chairs'
 LITTLE_NUM = {'train': 100, 'test': 20}
 

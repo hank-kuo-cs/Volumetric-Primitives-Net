@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 from torch.nn import L1Loss, MSELoss
-from modules import Renderer
+from ..render import Renderer
 from config import SILHOUETTE_LOSS_FUNC
 
 

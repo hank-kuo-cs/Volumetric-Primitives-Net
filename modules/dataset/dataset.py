@@ -17,8 +17,7 @@ class_dict = {'airplane': '02691156', 'rifle': '04090263', 'display': '03211117'
 
 img_transform = transforms.Compose([
     transforms.Resize(IMG_SIZE),
-    transforms.ToTensor(),
-    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+    transforms.ToTensor()
 ])
 
 vp_num = CUBOID_NUM + SPHERE_NUM + CONE_NUM
@@ -99,10 +98,14 @@ class ShapeNetDataset(Dataset):
 
     @staticmethod
     def _load_rgb_and_silhouette(img_path: str) -> (torch.Tensor, torch.Tensor):
-        img = Image.open(img_path).convert('RGB')
+        img = Image.open(img_path)
         img = img_transform(img)
+        rgb, silhouette = img[:3], img[3]
 
-        return img[:3], img[3]
+        if IS_NORMALIZE:
+            rgb = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])(rgb)
+
+        return rgb, silhouette
 
     @staticmethod
     def _load_meta(meta_path: str) -> (list, list, list):
