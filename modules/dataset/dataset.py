@@ -38,12 +38,15 @@ class ShapeNetDataset(Dataset):
 
     def __getitem__(self, item) -> (torch.Tensor, torch.Tensor, torch.Tensor):
         shapenet_data = self.shapenet_datas[item]
-        img = self._load_img(shapenet_data.img_path)
+        dist, elev, azim = shapenet_data.dist, shapenet_data.elev, shapenet_data.azim
+        rgb, silhouette = self._load_rgb_and_silhouette(shapenet_data.img_path)
+
         # vertices, faces = self._load_mesh(shapenet_data.obj_path)
         # vertices = self.transform_to_view_center(vertices, shapenet_data.elev, shapenet_data.azim)
+
         points = self._load_sample_points(shapenet_data.obj_path)
 
-        return img, points
+        return rgb, silhouette, points, dist, elev, azim
 
     def _load_data(self):
         self._load_split_data()
@@ -95,11 +98,11 @@ class ShapeNetDataset(Dataset):
         return imgs_path, azims, elevs, dists
 
     @staticmethod
-    def _load_img(img_path: str) -> torch.Tensor:
+    def _load_rgb_and_silhouette(img_path: str) -> (torch.Tensor, torch.Tensor):
         img = Image.open(img_path).convert('RGB')
         img = img_transform(img)
 
-        return img[:3]
+        return img[:3], img[3]
 
     @staticmethod
     def _load_meta(meta_path: str) -> (list, list, list):

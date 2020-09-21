@@ -1,6 +1,8 @@
 import torch
+from kaolin.rep import TriangleMesh
 from .cuboid import cuboid_meshing
 from .sphere import sphere_meshing
+from config import DEVICE
 
 
 class Meshing:
@@ -16,6 +18,24 @@ class Meshing:
     def sphere_meshing(cls, v: torch.Tensor, q: torch.Tensor, t: torch.Tensor) -> list:
         cls.check_parameters(v, q, t)
         return sphere_meshing(v, q, t)
+
+    @staticmethod
+    def compose_meshes(meshes: list):
+        vertices = []
+        faces = []
+
+        for i, mesh in enumerate(meshes):
+            last_vertices_num = meshes[i - 1].vertices.size(0) if i != 0 else 0
+            vertices_now = mesh.vertices.clone()
+            faces_now = mesh.faces.clone()
+
+            vertices.append(vertices_now)
+            faces.append(faces_now + last_vertices_num)
+
+        result_mesh = TriangleMesh.from_tensors(vertices=torch.cat(vertices), faces=torch.cat(faces))
+        result_mesh.to(DEVICE)
+
+        return result_mesh
 
     @staticmethod
     def check_parameters(v: torch.Tensor, q: torch.Tensor, t: torch.Tensor):
