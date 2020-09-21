@@ -62,9 +62,9 @@ def sample_predict_points(volumes, rotates, translates):
 
 def get_vp_meshes(volumes, rotates, translates):
     vp_num = CUBOID_NUM + SPHERE_NUM + CONE_NUM
-    meshing_funcs = [Meshing.cuboid_meshing, Sampling.sphere_sampling, Sampling.cone_sampling]
+    meshing_funcs = [Meshing.cuboid_meshing, Meshing.sphere_meshing, Meshing.]
 
-    batch_vp_meshes = [[] for i in range(BATCH_SIZE)]
+    batch_vp_meshes = [[] for i in range(BATCH_SIZE)]  # (B, K)
     meshing_type = 0
 
     for i in range(vp_num):
@@ -72,9 +72,10 @@ def get_vp_meshes(volumes, rotates, translates):
             meshing_type += 1
 
         meshing = meshing_funcs[meshing_type]
+        meshes = meshing(volumes[i], rotates[i], translates[i])  # (B)
 
         for b in range(BATCH_SIZE):
-            batch_vp_meshes[b].append(meshing(volumes[i], rotates[i], translates[i])[b])
+            batch_vp_meshes[b].append(meshes[b])
 
     return batch_vp_meshes
 

@@ -19,6 +19,11 @@ class Meshing:
         cls.check_parameters(v, q, t)
         return sphere_meshing(v, q, t)
 
+    @classmethod
+    def cone_meshing(cls, v: torch.Tensor, q: torch.Tensor, t: torch.Tensor) -> list:
+        cls.check_parameters(v, q, t)
+        pass
+
     @staticmethod
     def compose_meshes(meshes: list):
         vertices = []
