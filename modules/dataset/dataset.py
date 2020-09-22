@@ -62,7 +62,7 @@ class ShapeNetDataset(Dataset):
                 continue
 
             class_index = class_ids.index(class_id)
-            if LITTLE_NUM[self.dataset_type] > 0 and class_model_num[class_index] >= LITTLE_NUM[self.dataset_type] // len(CLASSES):
+            if 0 < LITTLE_NUM[self.dataset_type] <= class_model_num[class_index]:
                 continue
             class_model_num[class_index] += 1
 

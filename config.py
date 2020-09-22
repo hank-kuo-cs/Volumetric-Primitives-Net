@@ -1,6 +1,6 @@
 # CUDA
 DEVICE = 'cuda'
-DEVICE_NUM = '6'
+DEVICE_NUM = '5'
 
 # Hyper parameter
 LR = 1e-4
@@ -18,10 +18,10 @@ IS_NORMALIZE = False
 # Network
 MANUAL_SEED = 1234
 BACKBONE = 'resnet18'  # resnet18, vgg19, resnet50
-VP_CLAMP_MIN = 0.0
-VP_CLAMP_MAX = 1.0
+VP_CLAMP_MIN = 0.01
+VP_CLAMP_MAX = 0.8
 IS_DROPOUT = False
-IS_DEPTH_RESTRICT = False
+VOLUME_RESTRICT = [1, 1, 4]
 SILHOUETTE_LOSS_FUNC = 'L1'
 
 # Path
