@@ -4,6 +4,7 @@ DEVICE_NUM = '5'
 
 # Hyper parameter
 LR = 1e-4
+W_DECAY = 1e-6
 SAMPLE_NUM = 200
 BATCH_SIZE = 8
 EPOCH_NUM = 50
