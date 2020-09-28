@@ -8,6 +8,7 @@ from torch.utils.data import Dataset
 from torchvision.transforms import transforms
 from kaolin.rep import TriangleMesh
 from .data import ShapeNetData
+from ..transform.rotate import rotate_points
 from config import *
 
 
@@ -40,12 +41,17 @@ class ShapeNetDataset(Dataset):
         dist, elev, azim = shapenet_data.dist, shapenet_data.elev, shapenet_data.azim
         rgb, silhouette = self._load_rgb_and_silhouette(shapenet_data.img_path)
 
-        # vertices, faces = self._load_mesh(shapenet_data.obj_path)
-        # vertices = self.transform_to_view_center(vertices, shapenet_data.elev, shapenet_data.azim)
-
         points = self._load_sample_points(shapenet_data.obj_path)
+        points = self.transform_to_view_center(points, dist, elev, azim)
 
-        return rgb, silhouette, points, dist, elev, azim
+        return {
+            'rgb': rgb,
+            'silhouette': silhouette,
+            'points': points,
+            'dist': dist,
+            'elev': elev,
+            'azim': azim
+        }
 
     def _load_data(self):
         self._load_split_data()
@@ -133,14 +139,21 @@ class ShapeNetDataset(Dataset):
         return mesh.sample(SAMPLE_NUM * vp_num)[0]
 
     @staticmethod
-    def transform_to_view_center(vertices: torch.Tensor, elev: float, azim: float) -> torch.Tensor:
+    def transform_to_view_center(vertices: torch.Tensor, dist: float, elev: float, azim: float) -> torch.Tensor:
+        assert vertices.size(-1) == 3 and vertices.ndimension() == 2
+        y_vec, neg_z_vec = [0, 1, 0], [0, 0, -1]
+
+        q = torch.tensor([*neg_z_vec, elev / 360], dtype=torch.float, device=DEVICE)[None]
+        vertices = vertices[None].to(DEVICE)
+        vertices = rotate_points(vertices, q)
+
+        y_vec_tensor = torch.tensor(y_vec, dtype=torch.float, device=DEVICE)[None, None]
+        y_vec = rotate_points(y_vec_tensor, q)[0, 0].tolist()
+
+        q = torch.tensor([*y_vec, azim / 360], dtype=torch.float, device=DEVICE)[None]
+        vertices = rotate_points(vertices, q)
+
+        vertices = vertices.squeeze(0) / dist
+
+        assert vertices.size(-1) == 3 and vertices.ndimension() == 2
         return vertices
-        # TODO: normalize vertices to view-centered coordinate
-        #
-        # assert vertices.size(-1) == 3 and vertices.ndimension() == 2
-        # normalize_vertices = None
-        #
-        #
-        #
-        # assert normalize_vertices.size(-1) == 3 and normalize_vertices.ndimension() == 2
-        # return normalize_vertices

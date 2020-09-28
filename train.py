@@ -106,8 +106,8 @@ def train():
         progress_bar = tqdm(train_dataloader)
 
         for data in progress_bar:
-            rgbs, silhouettes, points = data[0].to(DEVICE), data[1].to(DEVICE), data[2].to(DEVICE)
-            dists, elevs, azims = data[3].to(DEVICE), data[4].to(DEVICE), data[5].to(DEVICE)
+            rgbs, silhouettes, points = data['rgb'].to(DEVICE), data['silhouette'].to(DEVICE), data['points'].to(DEVICE)
+            dists, elevs, azims = data['dist'].to(DEVICE), data['elev'].to(DEVICE), data['azim'].to(DEVICE)
 
             volumes, rotates, translates = model(rgbs)
 

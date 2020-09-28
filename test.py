@@ -49,7 +49,7 @@ def test(epoch: int):
     cd_loss, n = 0.0, 0
 
     for data in progress_bar:
-        rgbs, points = data[0].to(DEVICE), data[2].to(DEVICE)
+        rgbs, points = data['rgb'].to(DEVICE), data['points'].to(DEVICE)
 
         volumes, rotates, translates = model(rgbs)
         predict_points = []
