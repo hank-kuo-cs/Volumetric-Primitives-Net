@@ -1,7 +1,8 @@
 import torch
 import torch.nn as nn
 from torchvision.models import resnet18
-from config import CUBOID_NUM, SPHERE_NUM, CONE_NUM, VP_CLAMP_MAX, VP_CLAMP_MIN, IS_DROPOUT
+from config import CUBOID_NUM, SPHERE_NUM, CONE_NUM, VP_CLAMP_MAX, VP_CLAMP_MIN, IS_DROPOUT, VOLUME_RESTRICT
+
 
 sigmoid = nn.Sigmoid()
 tanh = nn.Tanh()
@@ -46,7 +47,8 @@ class VPNet(nn.Module):
         translates = translates.split(3, dim=1)
 
         for i in range(len(volumes)):
-            volumes[i][:, 2] = torch.div(volumes[i][:, 2], 4)
+            for j in range(3):
+                volumes[i][:, j] = torch.div(volumes[i][:, j], VOLUME_RESTRICT[j])
 
         # volumetric_primitives = []
         #

@@ -17,8 +17,7 @@ class_dict = {'airplane': '02691156', 'rifle': '04090263', 'display': '03211117'
 
 img_transform = transforms.Compose([
     transforms.Resize(IMG_SIZE),
-    transforms.ToTensor(),
-    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+    transforms.ToTensor()
 ])
 
 vp_num = CUBOID_NUM + SPHERE_NUM + CONE_NUM
@@ -38,12 +37,15 @@ class ShapeNetDataset(Dataset):
 
     def __getitem__(self, item) -> (torch.Tensor, torch.Tensor, torch.Tensor):
         shapenet_data = self.shapenet_datas[item]
-        img = self._load_img(shapenet_data.img_path)
+        dist, elev, azim = shapenet_data.dist, shapenet_data.elev, shapenet_data.azim
+        rgb, silhouette = self._load_rgb_and_silhouette(shapenet_data.img_path)
+
         # vertices, faces = self._load_mesh(shapenet_data.obj_path)
         # vertices = self.transform_to_view_center(vertices, shapenet_data.elev, shapenet_data.azim)
+
         points = self._load_sample_points(shapenet_data.obj_path)
 
-        return img, points
+        return rgb, silhouette, points, dist, elev, azim
 
     def _load_data(self):
         self._load_split_data()
@@ -60,7 +62,7 @@ class ShapeNetDataset(Dataset):
                 continue
 
             class_index = class_ids.index(class_id)
-            if LITTLE_NUM[self.dataset_type] > 0 and class_model_num[class_index] >= LITTLE_NUM[self.dataset_type] // len(CLASSES):
+            if 0 < LITTLE_NUM[self.dataset_type] <= class_model_num[class_index]:
                 continue
             class_model_num[class_index] += 1
 
@@ -95,11 +97,15 @@ class ShapeNetDataset(Dataset):
         return imgs_path, azims, elevs, dists
 
     @staticmethod
-    def _load_img(img_path: str) -> torch.Tensor:
-        img = Image.open(img_path).convert('RGB')
+    def _load_rgb_and_silhouette(img_path: str) -> (torch.Tensor, torch.Tensor):
+        img = Image.open(img_path)
         img = img_transform(img)
+        rgb, silhouette = img[:3], img[3].unsqueeze(0)
 
-        return img[:3]
+        if IS_NORMALIZE:
+            rgb = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])(rgb)
+
+        return rgb, silhouette
 
     @staticmethod
     def _load_meta(meta_path: str) -> (list, list, list):

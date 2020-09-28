@@ -1,19 +1,31 @@
 # CUDA
 DEVICE = 'cuda'
-DEVICE_NUM = '6'
+DEVICE_NUM = '5'
 
-# HYPER PARAMETER
+# Hyper parameter
 LR = 1e-4
+W_DECAY = 1e-6
 SAMPLE_NUM = 200
-BATCH_SIZE = 4
+BATCH_SIZE = 8
 EPOCH_NUM = 50
 CD_W1 = 1.0
-CD_W2 = 1.0
-VP_CLAMP_MIN = 0.0
-VP_CLAMP_MAX = 1.0
-IS_DROPOUT = False
+CD_W2 = 0.5
+L_CD = 1.0
+L_SIL = 0.01
 
-# PATH
+# Dataset
+IS_NORMALIZE = False
+
+# Network
+MANUAL_SEED = 1234
+BACKBONE = 'resnet18'  # resnet18, vgg19, resnet50
+VP_CLAMP_MIN = 0.01
+VP_CLAMP_MAX = 0.8
+IS_DROPOUT = False
+VOLUME_RESTRICT = [1, 1, 4]
+SILHOUETTE_LOSS_FUNC = 'L1'
+
+# Path
 EXPERIMENT_PATH = 'experiment/100_chairs'
 LITTLE_NUM = {'train': 100, 'test': 20}
 

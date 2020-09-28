@@ -36,6 +36,14 @@ class Sampling:
 
         return sample_points
 
+    @classmethod
+    def cone_sampling(cls,
+                      v: torch.Tensor,
+                      q: torch.Tensor,
+                      t: torch.Tensor,
+                      num_points: int = 1000):
+        pass
+
     @staticmethod
     def check_parameters(v, q, t):
         B = v.size(0)

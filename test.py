@@ -1,4 +1,5 @@
 import os
+import sys
 import random
 import torch
 from tqdm import tqdm
@@ -7,62 +8,87 @@ from modules import VPNet, ShapeNetDataset, Sampling, ChamferDistanceLoss, Meshi
 from config import *
 
 
-random.seed(1234)
-os.environ['CUDA_VISIBLE_DEVICES'] = DEVICE_NUM
+def set_seed(manual_seed=MANUAL_SEED):
+    random.seed(manual_seed)
+    torch.manual_seed(manual_seed)
 
-print('Load dataset...')
-test_dataset = ShapeNetDataset('test')
-test_dataloader = DataLoader(dataset=test_dataset, batch_size=BATCH_SIZE, shuffle=True, num_workers=4)
-print('Dataset size =', len(test_dataset))
+    if DEVICE != 'cpu':
+        torch.cuda.manual_seed(manual_seed)
+        torch.cuda.manual_seed_all(manual_seed)
 
-epoch = int(input('Use epoch = '))
-checkpoint_path = os.path.join(EXPERIMENT_PATH, 'checkpoint')
+    torch.backends.cudnn.deterministic = True
 
-model = VPNet().to(DEVICE)
-model.load_state_dict(torch.load(os.path.join(checkpoint_path, 'model_epoch%03d.pth' % epoch)))
 
-cd_loss_func = ChamferDistanceLoss()
-vp_num = CUBOID_NUM + SPHERE_NUM + CONE_NUM
+def load_dataset():
+    print('Load dataset...')
+    test_dataset = ShapeNetDataset('test')
+    test_dataloader = DataLoader(dataset=test_dataset, batch_size=BATCH_SIZE, shuffle=True, num_workers=4)
+    print('Dataset size =', len(test_dataset))
 
-model.eval()
+    return test_dataloader
 
-progress_bar = tqdm(test_dataloader)
-cd_loss, n = 0.0, 0
 
-for data in progress_bar:
-    imgs, points = data[0].to(DEVICE), data[1].to(DEVICE)
+def get_model_path(epoch):
+    checkpoint_path = os.path.join(EXPERIMENT_PATH, 'checkpoint')
+    return os.path.join(checkpoint_path, 'model_epoch%03d.pth' % epoch)
 
-    volumes, rotates, translates = model(imgs)
-    predict_points = []
+
+def test(epoch: int):
+    test_dataloader = load_dataset()
+    model_path = get_model_path(epoch)
+
+    model = VPNet().to(DEVICE)
+    model.load_state_dict(torch.load(model_path))
+
+    cd_loss_func = ChamferDistanceLoss()
+    vp_num = CUBOID_NUM + SPHERE_NUM + CONE_NUM
+
+    model.eval()
+
+    progress_bar = tqdm(test_dataloader)
+    cd_loss, n = 0.0, 0
+
+    for data in progress_bar:
+        rgbs, points = data[0].to(DEVICE), data[2].to(DEVICE)
+
+        volumes, rotates, translates = model(rgbs)
+        predict_points = []
+
+        for i in range(vp_num):
+            sampling = Sampling.cuboid_sampling if i < CUBOID_NUM else Sampling.sphere_sampling
+            predict_points.append(sampling(volumes[i], rotates[i], translates[i], SAMPLE_NUM))
+
+        predict_points = torch.cat(predict_points, dim=1)
+        cd_loss += cd_loss_func(predict_points, points).item()
+        n += 1
+
+    print('Epoch %d, avg cd loss = %.6f' % (epoch, cd_loss / n))
+
+    # Record some result
+    volumes, rotates, translates = model(rgbs)
+    batch_vp_meshes = [[] for i in range(BATCH_SIZE)]
 
     for i in range(vp_num):
-        sampling = Sampling.cuboid_sampling if i < CUBOID_NUM else Sampling.sphere_sampling
-        predict_points.append(sampling(volumes[i], rotates[i], translates[i], SAMPLE_NUM))
+        meshing = Meshing.cuboid_meshing if i < CUBOID_NUM else Meshing.sphere_meshing
 
-    predict_points = torch.cat(predict_points, dim=1)
-    cd_loss += cd_loss_func(predict_points, points, CD_W1, CD_W2).item()
-    n += 1
+        for b in range(BATCH_SIZE):
+            batch_vp_meshes[b].append(meshing(volumes[i], rotates[i], translates[i])[b])
 
-print('Epoch %d, avg cd loss = %.6f' % (epoch, cd_loss / n))
+    classes_str = ''
+    for c in TEST_CLASSES:
+        classes_str += c + '_'
 
-# Record some result
-volumes, rotates, translates = model(imgs)
-batch_vp_meshes = [[] for i in range(BATCH_SIZE)]
-
-for i in range(vp_num):
-    meshing = Meshing.cuboid_meshing if i < CUBOID_NUM else Meshing.sphere_meshing
+    dir_path = os.path.join(EXPERIMENT_PATH, 'test', classes_str)
+    os.makedirs(dir_path, exist_ok=True)
 
     for b in range(BATCH_SIZE):
-        batch_vp_meshes[b].append(meshing(volumes[i], rotates[i], translates[i])[b])
+        img = rgbs[b]
+        vp_meshes = batch_vp_meshes[b]
+        Visualizer.render_vp_meshes(img, vp_meshes, os.path.join(dir_path, 'epoch%d-%d.png' % (epoch, b)))
 
-classes_str = ''
-for c in TEST_CLASSES:
-    classes_str += c + '_'
 
-dir_path = os.path.join(EXPERIMENT_PATH, 'test', classes_str)
-os.makedirs(dir_path, exist_ok=True)
-
-for b in range(BATCH_SIZE):
-    img = imgs[b]
-    vp_meshes = batch_vp_meshes[b]
-    Visualizer.render_vp_meshes(img, vp_meshes, os.path.join(dir_path, 'epoch%d-%d.png' % (epoch, b)))
+if __name__ == '__main__':
+    epoch = int(sys.argv[1])
+    set_seed()
+    os.environ['CUDA_VISIBLE_DEVICES'] = DEVICE_NUM
+    test(epoch)
