@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 from torchvision.models import resnet18
-from config import CUBOID_NUM, SPHERE_NUM, CONE_NUM, VP_CLAMP_MAX, VP_CLAMP_MIN, IS_DROPOUT, VOLUME_RESTRICT
+from config import CUBOID_NUM, SPHERE_NUM, CONE_NUM, VP_CLAMP_MAX, VP_CLAMP_MIN, IS_DROPOUT, IS_SIGMOID, VOLUME_RESTRICT
 
 
 sigmoid = nn.Sigmoid()
@@ -20,8 +20,32 @@ class VPNet(nn.Module):
         self._model.rotate = self._make_linear(4 * self._vp_num)
         self._model.translate = self._make_linear(3 * self._vp_num)
 
-    def forward(self, x):
-        out = self._model.conv1(x)
+    def forward(self, imgs):
+        features = self.extract_feature(imgs)
+
+        volumes = self._model.volume(features)
+        rotates = self._model.rotate(features)
+        translates = self._model.translate(features)
+
+        if IS_SIGMOID:
+            volumes = sigmoid(volumes)
+            rotates = tanh(rotates)
+            translates = tanh(translates)
+        else:
+            volumes = torch.clamp(volumes,  min=VP_CLAMP_MIN + 1e-8, max=VP_CLAMP_MAX)
+            rotates = torch.clamp(rotates, min=-1, max=1)
+            translates = torch.clamp(translates, min=-1, max=1)
+
+        volumes = volumes.split(3, dim=1)
+        rotates = rotates.split(4, dim=1)
+        translates = translates.split(3, dim=1)
+
+        volumes = self.restrict_volumes(volumes)
+
+        return volumes, rotates, translates
+
+    def extract_feature(self, imgs):
+        out = self._model.conv1(imgs)
         out = self._model.bn1(out)
         out = self._model.relu(out)
         out = self._model.maxpool(out)
@@ -34,35 +58,17 @@ class VPNet(nn.Module):
         out = self._model.avgpool(out)
         features = out.view(out.size(0), -1)
 
-        volumes = torch.clamp(self._model.volume(features), min=VP_CLAMP_MIN + 1e-8, max=VP_CLAMP_MAX)
-        rotates = torch.clamp(self._model.rotate(features), min=-1, max=1)
-        translates = torch.clamp(self._model.translate(features), min=-1, max=1)
+        return features
 
-        # volumes = sigmoid(self._model.volume(features))
-        # rotates = tanh(self._model.rotate(features))
-        # translates = tanh(self._model.translate(features))
-
-        volumes = volumes.split(3, dim=1)
-        rotates = rotates.split(4, dim=1)
-        translates = translates.split(3, dim=1)
-
+    @staticmethod
+    def restrict_volumes(volumes):
         for i in range(len(volumes)):
             for j in range(3):
                 volumes[i][:, j] = torch.div(volumes[i][:, j], VOLUME_RESTRICT[j])
-
-        # volumetric_primitives = []
-        #
-        # for i in range(self._vp_num):
-        #     vp = torch.cat([volumes[i], rotates[i], translates[i]], dim=1)
-        #     volumetric_primitives.append(vp)
-
-        return volumes, rotates, translates
+        return volumes
 
     @staticmethod
     def _make_linear(output_dim: int):
-        # cuboid: w, h, d, rotate(4), translate(3) -> 10
-        # sphere: r(3), rotate(4), translate(3) -> 10
-        # cone: r(2), h, rotate(4), translate(3) -> 10
         dropout_layers = nn.Sequential(
             nn.Linear(512, 1024),
             nn.Dropout(),

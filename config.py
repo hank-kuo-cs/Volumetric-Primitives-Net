@@ -9,9 +9,9 @@ SAMPLE_NUM = 200
 BATCH_SIZE = 8
 EPOCH_NUM = 50
 CD_W1 = 1.0
-CD_W2 = 0.5
+CD_W2 = 1.0
 L_CD = 1.0
-L_SIL = 0.01
+L_SIL = 0.0
 
 # Dataset
 IS_NORMALIZE = False
@@ -22,16 +22,17 @@ BACKBONE = 'resnet18'  # resnet18, vgg19, resnet50
 VP_CLAMP_MIN = 0.01
 VP_CLAMP_MAX = 0.8
 IS_DROPOUT = False
-VOLUME_RESTRICT = [1, 1, 4]
-SILHOUETTE_LOSS_FUNC = 'L1'
+IS_SIGMOID = True
+VOLUME_RESTRICT = [8, 10, 10]
+SILHOUETTE_LOSS_FUNC = 'L1'  # L1 or MSE
 
 # Path
-EXPERIMENT_PATH = 'experiment/100_chairs'
+EXPERIMENT_PATH = 'experiment'
 LITTLE_NUM = {'train': 100, 'test': 20}
 
 # Volumetric Primitives
-CUBOID_NUM = 6
-SPHERE_NUM = 6
+CUBOID_NUM = 8
+SPHERE_NUM = 8
 CONE_NUM = 0
 
 # Dataset
