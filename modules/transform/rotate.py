@@ -4,7 +4,7 @@ from config import DEVICE
 PI = 3.1415927410125732
 
 
-def rotate_points(points: torch.Tensor, quaternions: torch.Tensor):
+def rotate_points(points: torch.Tensor, quaternions: torch.Tensor, device=DEVICE):
     """
     Rotate input points with quaternion.
     :param points: torch.Tensor(B, N, 3)
@@ -15,7 +15,7 @@ def rotate_points(points: torch.Tensor, quaternions: torch.Tensor):
     check_quaternions(quaternions)
 
     quaternions = refine_quaternions(quaternions)
-    matrices = get_rotation_matrices(quaternions)  # (B, 3, 3)
+    matrices = get_rotation_matrices(quaternions, device)  # (B, 3, 3)
 
     points_transpose = points.permute(0, 2, 1)  # (B, 3, N)
     points_rotated = torch.bmm(matrices, points_transpose).permute(0, 2, 1)
@@ -23,13 +23,13 @@ def rotate_points(points: torch.Tensor, quaternions: torch.Tensor):
     return points_rotated
 
 
-def get_rotation_matrices(quaternions: torch.Tensor):
+def get_rotation_matrices(quaternions: torch.Tensor, device):
     x, y, z, w = quaternions[:, 0], quaternions[:, 1], quaternions[:, 2], quaternions[:, 3]
 
     x2, y2, z2, w2 = x * x, y * y, z * z, w * w
     xy, zw, xz, yw, yz, xw = x * y, z * w, x * z, y * w, y * z, x * w
 
-    matrices = torch.zeros(quaternions.size(0), 3, 3, dtype=torch.float, requires_grad=True).to(DEVICE)
+    matrices = torch.zeros(quaternions.size(0), 3, 3, dtype=torch.float, requires_grad=True, device=device)
 
     matrices[:, 0, 0] = x2 - y2 - z2 + w2
     matrices[:, 1, 0] = 2 * (xy + zw)

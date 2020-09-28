@@ -143,17 +143,17 @@ class ShapeNetDataset(Dataset):
         assert vertices.size(-1) == 3 and vertices.ndimension() == 2
         y_vec, neg_z_vec = [0, 1, 0], [0, 0, -1]
 
-        q = torch.tensor([*neg_z_vec, elev / 360], dtype=torch.float)[None].to(DEVICE)
-        vertices = vertices[None].to(DEVICE)
-        vertices = rotate_points(vertices, q)
+        q = torch.tensor([*neg_z_vec, elev / 360], dtype=torch.float)[None]
+        vertices = vertices[None]
+        vertices = rotate_points(vertices, q, 'cpu')
 
-        y_vec_tensor = torch.tensor(y_vec, dtype=torch.float)[None, None].to(DEVICE)
-        y_vec = rotate_points(y_vec_tensor, q)[0, 0].tolist()
+        y_vec_tensor = torch.tensor(y_vec, dtype=torch.float)[None, None]
+        y_vec = rotate_points(y_vec_tensor, q, 'cpu')[0, 0].tolist()
 
-        q = torch.tensor([*y_vec, azim / 360], dtype=torch.float)[None].to(DEVICE)
-        vertices = rotate_points(vertices, q)
+        q = torch.tensor([*y_vec, azim / 360], dtype=torch.float)[None]
+        vertices = rotate_points(vertices, q, 'cpu')
 
-        vertices = vertices.squeeze(0) / dist
+        vertices = vertices.detach().squeeze(0) / dist
 
         assert vertices.size(-1) == 3 and vertices.ndimension() == 2
         return vertices
