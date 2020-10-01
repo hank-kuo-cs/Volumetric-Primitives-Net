@@ -169,7 +169,8 @@ class ShapeNetDataset(Dataset):
 
             new_obj_path = re.sub('rendering', 'objs', img_path)
             new_obj_path = re.sub('png', 'obj', new_obj_path)
-            os.makedirs(new_obj_path, exist_ok=True)
+
+            os.makedirs(os.path.dirname(new_obj_path), exist_ok=True)
 
             print(new_obj_path)
             mesh.save_mesh(new_obj_path)
