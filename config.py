@@ -36,6 +36,7 @@ SPHERE_NUM = 8
 CONE_NUM = 0
 
 # Dataset
+IS_VIEW_CENTER = True
 IMG_SIZE = 128
 # airplane, rifle, display, table, telephone, car, chair, bench, lamp, cabinet, loudspeaker, sofa, watercraft
 TRAIN_CLASSES = ['chair']

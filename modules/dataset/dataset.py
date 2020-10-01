@@ -42,7 +42,9 @@ class ShapeNetDataset(Dataset):
         rgb, silhouette = self._load_rgb_and_silhouette(shapenet_data.img_path)
 
         points = self._load_sample_points(shapenet_data.obj_path)
-        points = self.transform_to_view_center(points, dist, elev, azim)
+        if IS_VIEW_CENTER:
+            points = self.transform_to_view_center(points, dist, elev, azim)
+            dist, elev, azim = 1, 0, 0
 
         return {
             'rgb': rgb,
@@ -129,9 +131,9 @@ class ShapeNetDataset(Dataset):
         return azims, elevs, dists
 
     @staticmethod
-    def _load_mesh(obj_path: str) -> (torch.Tensor, torch.Tensor):
+    def _load_mesh(obj_path: str) -> TriangleMesh:
         mesh = TriangleMesh.from_obj(obj_path)
-        return mesh.vertices, mesh.faces
+        return mesh
 
     @staticmethod
     def _load_sample_points(obj_path: str) -> torch.Tensor:
@@ -143,16 +145,28 @@ class ShapeNetDataset(Dataset):
         assert vertices.size(-1) == 3 and vertices.ndimension() == 2
         y_vec, neg_z_vec = [0, 1, 0], [0, 0, -1]
 
-        q = torch.tensor([*neg_z_vec, elev / 360], dtype=torch.float)[None]
-        vertices = vertices[None]
-        vertices = rotate_points(vertices, q, requires_grad=False)
+        q = torch.tensor([*neg_z_vec, elev / 360], dtype=torch.float)[None].to(DEVICE)
+        vertices = vertices[None].to(DEVICE)
+        vertices = rotate_points(vertices, q)
 
-        y_vec_tensor = torch.tensor(y_vec, dtype=torch.float)[None, None]
-        y_vec = rotate_points(y_vec_tensor, q, requires_grad=False)[0, 0].tolist()
+        y_vec_tensor = torch.tensor(y_vec, dtype=torch.float)[None, None].to(DEVICE)
+        y_vec = rotate_points(y_vec_tensor, q)[0, 0].tolist()
 
-        q = torch.tensor([*y_vec, azim / 360], dtype=torch.float)[None]
-        vertices = rotate_points(vertices, q, requires_grad=False)
+        q = torch.tensor([*y_vec, azim / 360], dtype=torch.float)[None].to(DEVICE)
+        vertices = rotate_points(vertices, q)
 
         vertices = vertices.squeeze(0) / dist
 
-        return vertices
+        return vertices.detach().cpu()
+
+    def save_view_center_dataset(self):
+        for shapenet_data in self.shapenet_datas:
+            img_path, obj_path = shapenet_data.img_path, shapenet_data.obj_path
+            dist, elev, azim = shapenet_data.dist, shapenet_data.elev, shapenet_data.azim
+
+            mesh = self._load_mesh(obj_path)
+            mesh.vertices = self.transform_to_view_center(mesh.vertices, dist, elev, azim)
+
+            new_obj_path = re.sub('rendering', 'objs', img_path)
+            new_obj_path = re.sub('png', 'obj', new_obj_path)
+            mesh.save_mesh(new_obj_path)
