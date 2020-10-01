@@ -160,7 +160,8 @@ class ShapeNetDataset(Dataset):
         return vertices.detach().cpu()
 
     def save_view_center_dataset(self):
-        for shapenet_data in self.shapenet_datas:
+        for i in tqdm(range(len(self.shapenet_datas))):
+            shapenet_data = self.shapenet_datas[i]
             img_path, obj_path = shapenet_data.img_path, shapenet_data.obj_path
             dist, elev, azim = shapenet_data.dist, shapenet_data.elev, shapenet_data.azim
 
@@ -172,5 +173,4 @@ class ShapeNetDataset(Dataset):
 
             os.makedirs(os.path.dirname(new_obj_path), exist_ok=True)
 
-            print(new_obj_path)
             mesh.save_mesh(new_obj_path)
