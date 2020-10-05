@@ -69,6 +69,8 @@ def sample_points(meshes: list):
     for b in range(BATCH_SIZE):
         points.append(meshes[b].sample(SAMPLE_NUM * vp_num)[0])
 
+    points = torch.cat(poitns)
+
     return points
 
 
