@@ -9,6 +9,11 @@ tanh = nn.Tanh()
 
 
 class VPNet(nn.Module):
+    """
+    Volumetric Primitive Net:
+    Assemble some volumetric primitives (spheres, cuboids and cones) to reconstruct target 3D mesh.
+    This network is to predict the volume of theses volumetric primitives and their rotation and translation.
+    """
     def __init__(self):
         super().__init__()
         self._vp_num = CUBOID_NUM + SPHERE_NUM + CONE_NUM
@@ -27,14 +32,7 @@ class VPNet(nn.Module):
         rotates = self._model.rotate(features)
         translates = self._model.translate(features)
 
-        if IS_SIGMOID:
-            volumes = sigmoid(volumes)
-            rotates = tanh(rotates)
-            translates = tanh(translates)
-        else:
-            volumes = torch.clamp(volumes,  min=VP_CLAMP_MIN + 1e-8, max=VP_CLAMP_MAX)
-            rotates = torch.clamp(rotates, min=-1, max=1)
-            translates = torch.clamp(translates, min=-1, max=1)
+        volumes, rotates, translates = self.restrict_range(volumes, rotates, translates)
 
         volumes = volumes.split(3, dim=1)
         rotates = rotates.split(4, dim=1)
@@ -59,6 +57,18 @@ class VPNet(nn.Module):
         features = out.view(out.size(0), -1)
 
         return features
+
+    @staticmethod
+    def restrict_range(volumes, rotates, translates):
+        if IS_SIGMOID:
+            volumes = sigmoid(volumes)
+            rotates = tanh(rotates)
+            translates = tanh(translates)
+        else:
+            volumes = torch.clamp(volumes,  min=VP_CLAMP_MIN + 1e-8, max=VP_CLAMP_MAX)
+            rotates = torch.clamp(rotates, min=-1, max=1)
+            translates = torch.clamp(translates, min=-1, max=1)
+        return volumes, rotates, translates
 
     @staticmethod
     def restrict_volumes(volumes):

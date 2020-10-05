@@ -10,7 +10,8 @@ class SilhouetteLoss(nn.Module):
         super().__init__()
         self.loss_func = L1Loss() if SILHOUETTE_LOSS_FUNC == 'L1' else MSELoss()
 
-    def forward(self, predict_meshes, gt_silhouettes, dists, elevs, azims) -> torch.Tensor:
+    def forward(self, predict_meshes: list, gt_silhouettes: torch.Tensor,
+                dists: torch.Tensor, elevs: torch.Tensor, azims: torch.Tensor) -> torch.Tensor:
         predict_silhouettes = []
         for i in range(len(predict_meshes)):
             _, predict_silhouette, _ = Renderer.render(predict_meshes[i], dists[i], elevs[i], azims[i])
