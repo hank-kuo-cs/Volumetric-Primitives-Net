@@ -17,6 +17,8 @@ class SDNet(nn.Module):
     def forward(self, imgs):
         features = self.extract_feature(imgs)
         vertices_offset = self._model.deform(features)
+        vertices_offset = vertices_offset.view(imgs.size(0), 386, 3)
+
         return vertices_offset
 
     def extract_feature(self, imgs):
