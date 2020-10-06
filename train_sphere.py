@@ -67,9 +67,9 @@ def sample_points(meshes: list):
     points = []
 
     for b in range(BATCH_SIZE):
-        points.append(meshes[b].sample(SAMPLE_NUM * vp_num)[0])
+        points.append(meshes[b].sample(SAMPLE_NUM * vp_num)[0][None])
 
-    points = torch.cat(points, dim=1)
+    points = torch.cat(points, dim=0)
 
     return points
 
@@ -77,7 +77,6 @@ def sample_points(meshes: list):
 def train():
     train_dataloader = load_dataset()
     dir_path, checkpoint_path = set_file_path()
-    sphere_meshes = load_sphere_meshes()
 
     model = SDNet().to(DEVICE)
     optimizer = Adam(params=model.parameters(), lr=LR, betas=(0.9, 0.99), weight_decay=W_DECAY)
@@ -96,6 +95,7 @@ def train():
             rgbs, silhouettes, points = data['rgb'].to(DEVICE), data['silhouette'].to(DEVICE), data['points'].to(DEVICE)
             dists, elevs, azims = data['dist'].to(DEVICE), data['elev'].to(DEVICE), data['azim'].to(DEVICE)
 
+            sphere_meshes = load_sphere_meshes()
             vertices_offset = model(rgbs)
 
             # Chamfer Distance Loss
@@ -123,8 +123,8 @@ def train():
             for b in range(BATCH_SIZE):
                 img = rgbs[b]
                 predict_mesh = predict_meshes[b]
-                Visualizer.render_mesh(img, predict_mesh,
-                                       os.path.join(dir_path, 'epoch%d-%d.png' % (epoch_now + 1, b)))
+                Visualizer.render_mesh_gif(img, predict_mesh,
+                                           os.path.join(dir_path, 'epoch%d-%d.png' % (epoch_now + 1, b)))
 
             torch.save(model.state_dict(), os.path.join(checkpoint_path, 'model_epoch%03d.pth' % (epoch_now + 1)))
 

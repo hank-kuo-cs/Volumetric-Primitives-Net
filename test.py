@@ -46,7 +46,7 @@ def test(epoch: int):
     model.eval()
 
     progress_bar = tqdm(test_dataloader)
-    cd_loss, n = 0.0, 0
+    avg_cd_loss, n = 0.0, 0
 
     for data in progress_bar:
         rgbs, points = data['rgb'].to(DEVICE), data['points'].to(DEVICE)
@@ -59,10 +59,12 @@ def test(epoch: int):
             predict_points.append(sampling(volumes[i], rotates[i], translates[i], SAMPLE_NUM))
 
         predict_points = torch.cat(predict_points, dim=1)
-        cd_loss += cd_loss_func(predict_points, points).item()
+        cd_loss = cd_loss_func(predict_points, points) * L_CD
+        avg_cd_loss += cd_loss.item()
         n += 1
 
-    print('Epoch %d, avg cd loss = %.6f' % (epoch, cd_loss / n))
+    avg_cd_loss /= n
+    print('Epoch %d, avg cd loss = %.6f' % (epoch, avg_cd_loss))
 
     # Record some result
     volumes, rotates, translates = model(rgbs)
