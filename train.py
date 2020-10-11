@@ -114,7 +114,7 @@ def calculate_points_loss(predict_points, canonical_points, view_center_points, 
     cd_loss_func = ChamferDistanceLoss()
 
     if not IS_VIEW_CENTER:
-        return torch.tensor(0.0), cd_loss_func(predict_points, view_center_points) * L_CAN_CD
+        return torch.tensor(0.0).to(DEVICE), cd_loss_func(predict_points, view_center_points) * L_CAN_CD
 
     # ToDo: transform points from view-center coordinate to object-center coordinate
     obj_center_points = view_to_obj_points(predict_points, dists, elevs, azims)
@@ -151,8 +151,7 @@ def train(args):
 
         for data in progress_bar:
             rgbs, silhouettes = data['rgb'].to(DEVICE), data['silhouette'].to(DEVICE)
-            canonical_points, view_center_points = data['canonical_points'].to(DEVICE), data['view_center_points'].to(
-                DEVICE)
+            canonical_points, view_center_points = data['canonical_points'].to(DEVICE), data['view_center_points'].to(DEVICE)
             dists, elevs, azims = data['dist'].to(DEVICE), data['elev'].to(DEVICE), data['azim'].to(DEVICE)
 
             volumes, rotates, translates = model(rgbs)
