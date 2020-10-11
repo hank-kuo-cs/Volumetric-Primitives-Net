@@ -6,8 +6,8 @@ from .mesh import visualize_mesh_with_gif, visualize_mesh_with_3pose
 
 class Visualizer:
     @staticmethod
-    def render_vp_meshes(image: torch.Tensor, vp_meshes: list, save_name: str):
-        visualize_vp_meshes_with_gif(image, vp_meshes, save_name)
+    def render_vp_meshes(image: torch.Tensor, vp_meshes: list, save_name: str, dist: float = 2.0):
+        visualize_vp_meshes_with_gif(image, vp_meshes, save_name, dist=dist)
 
     @staticmethod
     def render_mesh_gif(image: torch.Tensor, mesh: TriangleMesh, save_name: str):

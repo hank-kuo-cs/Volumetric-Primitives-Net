@@ -36,20 +36,20 @@ class ShapeNetDataset(Dataset):
     def __len__(self) -> int:
         return len(self.shapenet_datas)
 
-    def __getitem__(self, item) -> (torch.Tensor, torch.Tensor, torch.Tensor):
+    def __getitem__(self, item) -> dict:
         shapenet_data = self.shapenet_datas[item]
+
         dist, elev, azim = shapenet_data.dist, shapenet_data.elev, shapenet_data.azim
         rgb, silhouette = self._load_rgb_and_silhouette(shapenet_data.img_path)
 
-        points = self._load_sample_points(shapenet_data.obj_path)
-        if IS_VIEW_CENTER:
-            points = self.transform_to_view_center(points, dist, elev, azim)
-            dist, elev, azim = 1, 0, 0
+        canonical_points = self._load_sample_points(shapenet_data.canonical_obj_path)
+        view_center_points = self._load_sample_points(shapenet_data.view_center_obj_path)
 
         return {
             'rgb': rgb,
             'silhouette': silhouette,
-            'points': points,
+            'canonical_points': canonical_points,
+            'view_center_points': view_center_points,
             'dist': dist,
             'elev': elev,
             'azim': azim
@@ -77,10 +77,13 @@ class ShapeNetDataset(Dataset):
             imgs_dir_path = os.path.join(DATASET_ROOT, 'ShapeNetRendering', class_id, obj_id, 'rendering')
 
             imgs_path, azims, elevs, dists = self._load_imgs_in_one_dir(imgs_dir_path)
-            obj_path = os.path.join(DATASET_ROOT, 'ShapeNetCore.v1', class_id, obj_id, 'model.obj')
+            object_center_obj_path = os.path.join(DATASET_ROOT, 'ShapeNetCore.v1', class_id, obj_id, 'model.obj')
+            view_center_objs_path = sorted(glob(os.path.join(DATASET_ROOT, 'ShapeNetRendering', class_id, obj_id, 'objs') + '/*.obj'))
 
             for j in range(len(imgs_path)):
-                shapenet_data = ShapeNetData(img_path=imgs_path[j], obj_path=obj_path,
+                shapenet_data = ShapeNetData(img_path=imgs_path[j],
+                                             canonical_obj_path=object_center_obj_path,
+                                             view_center_obj_path=view_center_objs_path[j],
                                              dist=dists[j], elev=elevs[j], azim=azims[j])
                 self.shapenet_datas.append(shapenet_data)
 

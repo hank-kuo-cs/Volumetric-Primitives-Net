@@ -59,7 +59,7 @@ def test(epoch: int):
             predict_points.append(sampling(volumes[i], rotates[i], translates[i], SAMPLE_NUM))
 
         predict_points = torch.cat(predict_points, dim=1)
-        cd_loss = cd_loss_func(predict_points, points) * L_CD
+        cd_loss = cd_loss_func(predict_points, points) * L_VIEW_CD
         avg_cd_loss += cd_loss.item()
         n += 1
 

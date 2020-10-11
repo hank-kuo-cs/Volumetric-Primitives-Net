@@ -10,21 +10,24 @@ BATCH_SIZE = 8
 EPOCH_NUM = 50
 CD_W1 = 1.0
 CD_W2 = 1.0
-L_CD = 1.0
+L_VIEW_CD = 1.0
+L_CAN_CD = 0.5
 L_SIL = 0.0
+
 
 # Dataset
 IS_NORMALIZE = False
 
 # Network
 MANUAL_SEED = 1234
-BACKBONE = 'resnet18'  # resnet18, vgg19, resnet50
+BACKBONE = 'resnet18'  # resnet18
 VP_CLAMP_MIN = 0.01
 VP_CLAMP_MAX = 0.8
 IS_DROPOUT = False
 IS_SIGMOID = True
 VOLUME_RESTRICT = [8, 10, 10]
 SILHOUETTE_LOSS_FUNC = 'L1'  # L1 or MSE
+IS_FIX_VOLUME = False
 
 # Path
 EXPERIMENT_PATH = 'experiment'
@@ -35,8 +38,11 @@ CUBOID_NUM = 8
 SPHERE_NUM = 8
 CONE_NUM = 0
 
+# Visualize
+SHOW_DIST = 2
+
 # Dataset
-IS_VIEW_CENTER = True
+IS_VIEW_CENTER = False
 IMG_SIZE = 128
 # airplane, rifle, display, table, telephone, car, chair, bench, lamp, cabinet, loudspeaker, sofa, watercraft
 TRAIN_CLASSES = ['chair']

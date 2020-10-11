@@ -1,10 +1,12 @@
 import os
 import random
 import torch
+import argparse
 from tqdm import tqdm
 from torch.utils.data import DataLoader
 from torch.optim import Adam
 from modules import VPNet, ShapeNetDataset, Sampling, ChamferDistanceLoss, Meshing, Visualizer, SilhouetteLoss
+from modules.transform import view_to_obj_points
 from config import *
 
 
@@ -17,6 +19,14 @@ def set_seed(manual_seed=MANUAL_SEED):
         torch.cuda.manual_seed_all(manual_seed)
 
     torch.backends.cudnn.deterministic = True
+
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-pre', '--pretrain_model', type=str,
+                        help='Load a pretrained model to continue training')
+
+    return parser.parse_args()
 
 
 def set_file_path():
@@ -39,6 +49,18 @@ def load_dataset():
     print('Dataset size =', len(train_dataset))
 
     return train_dataloader
+
+
+def load_model(pretrain_model_path: str):
+    model = VPNet().to(DEVICE)
+
+    if pretrain_model_path:
+        model.load_state_dict(torch.load(pretrain_model_path))
+
+    if IS_FIX_VOLUME:
+        model.fix_volume_weight()
+
+    return model
 
 
 def sample_predict_points(volumes, rotates, translates):
@@ -88,15 +110,37 @@ def compose_vp_meshes(batch_vp_meshes):
     return batch_meshes
 
 
-def train():
+def calculate_points_loss(predict_points, canonical_points, view_center_points, dists, elevs, azims):
+    cd_loss_func = ChamferDistanceLoss()
+
+    if not IS_VIEW_CENTER:
+        return torch.tensor(0.0), cd_loss_func(predict_points, view_center_points) * L_CAN_CD
+
+    # ToDo: transform points from view-center coordinate to object-center coordinate
+    obj_center_points = view_to_obj_points(predict_points, dists, elevs, azims)
+
+    view_center_cd_loss = cd_loss_func(predict_points, view_center_points) * L_VIEW_CD
+    obj_center_cd_loss = cd_loss_func(obj_center_points, canonical_points) * L_CAN_CD
+
+    return view_center_cd_loss, obj_center_cd_loss
+
+
+def calculate_silhouette_loss(predict_meshes, silhouettes, dists, elevs, azims):
+    silhouette_loss_func = SilhouetteLoss()
+
+    if IS_VIEW_CENTER:
+        dists = torch.full_like(dists, fill_value=1.0).to(DEVICE)
+        elevs, azims = torch.zeros_like(elevs).to(DEVICE), torch.zeros_like(azims).to(DEVICE)
+
+    return silhouette_loss_func(predict_meshes, silhouettes, dists, elevs, azims) * L_SIL
+
+
+def train(args):
     train_dataloader = load_dataset()
     dir_path, checkpoint_path = set_file_path()
 
-    model = VPNet().to(DEVICE)
+    model = load_model(args.pretrain_model)
     optimizer = Adam(params=model.parameters(), lr=LR, betas=(0.9, 0.99), weight_decay=W_DECAY)
-
-    cd_loss_func = ChamferDistanceLoss()
-    silhouette_loss_func = SilhouetteLoss()
 
     # Training Process
     for epoch_now in range(EPOCH_NUM):
@@ -106,30 +150,35 @@ def train():
         progress_bar = tqdm(train_dataloader)
 
         for data in progress_bar:
-            rgbs, silhouettes, points = data['rgb'].to(DEVICE), data['silhouette'].to(DEVICE), data['points'].to(DEVICE)
+            rgbs, silhouettes = data['rgb'].to(DEVICE), data['silhouette'].to(DEVICE)
+            canonical_points, view_center_points = data['canonical_points'].to(DEVICE), data['view_center_points'].to(
+                DEVICE)
             dists, elevs, azims = data['dist'].to(DEVICE), data['elev'].to(DEVICE), data['azim'].to(DEVICE)
 
             volumes, rotates, translates = model(rgbs)
 
             # Chamfer Distance Loss
             predict_points = sample_predict_points(volumes, rotates, translates)
-            cd_loss = cd_loss_func(predict_points, points) * L_CD
+
+            view_cd_loss, obj_cd_loss = calculate_points_loss(predict_points, canonical_points, view_center_points,
+                                                              dists, elevs, azims)
 
             # Silhouette Loss
             batch_vp_meshes = get_vp_meshes(volumes, rotates, translates)
             predict_meshes = compose_vp_meshes(batch_vp_meshes)
 
-            sil_loss = silhouette_loss_func(predict_meshes, silhouettes, dists, elevs, azims) * L_SIL
+            sil_loss = calculate_silhouette_loss(predict_meshes, silhouettes, dists, elevs, azims)
 
-            total_loss = cd_loss + sil_loss
+            total_loss = view_cd_loss + obj_cd_loss + sil_loss
 
             optimizer.zero_grad()
             total_loss.backward()
             optimizer.step()
 
             n += 1
-            epoch_avg_cd_loss += cd_loss.item()
-            progress_bar.set_description('CD Loss = %.6f, Sil Loss = %.6f' % (cd_loss.item(), sil_loss.item()))
+            epoch_avg_cd_loss += view_cd_loss.item()
+            progress_bar.set_description('View CD Loss = %.6f, Obj CD Loss = %.6f, Sil Loss = %.6f'
+                                         % (view_cd_loss.item(), obj_cd_loss.item(), sil_loss.item()))
 
         print('Epoch %d, avg loss = %.6f\n' % (epoch_now + 1, epoch_avg_cd_loss / n))
 
@@ -138,12 +187,14 @@ def train():
             for b in range(BATCH_SIZE):
                 img = rgbs[b]
                 vp_meshes = batch_vp_meshes[b]
-                Visualizer.render_vp_meshes(img, vp_meshes, os.path.join(dir_path, 'epoch%d-%d.png' % (epoch_now+1, b)))
+                save_name = os.path.join(dir_path, 'epoch%d-%d.png' % (epoch_now + 1, b))
+                Visualizer.render_vp_meshes(img, vp_meshes, save_name, dist=SHOW_DIST)
 
             torch.save(model.state_dict(), os.path.join(checkpoint_path, 'model_epoch%03d.pth' % (epoch_now + 1)))
 
 
 if __name__ == '__main__':
+    args = parse_args()
     set_seed()
     os.environ['CUDA_VISIBLE_DEVICES'] = DEVICE_NUM
-    train()
+    train(args)

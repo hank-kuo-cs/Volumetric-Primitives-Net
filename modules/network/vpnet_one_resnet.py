@@ -3,24 +3,22 @@ import torch.nn as nn
 from torchvision.models import resnet18
 from config import CUBOID_NUM, SPHERE_NUM, CONE_NUM, VP_CLAMP_MAX, VP_CLAMP_MIN, IS_DROPOUT, IS_SIGMOID, VOLUME_RESTRICT
 
-
 sigmoid = nn.Sigmoid()
 tanh = nn.Tanh()
 
 
-class VPNet(nn.Module):
+class VPNetOneRes(nn.Module):
     """
     Volumetric Primitive Net:
     Assemble some volumetric primitives (spheres, cuboids and cones) to reconstruct target 3D mesh.
     This network use two resnet18 to predict the volume of theses volumetric primitives and their rotation and translation.
     """
+
     def __init__(self):
         super().__init__()
         self._vp_num = CUBOID_NUM + SPHERE_NUM + CONE_NUM
 
-        self.volume_resnet = resnet18(pretrained=True)
-        self.transform_resnet = resnet18(pretrained=True)
-
+        self.resnet = resnet18(pretrained=True)
         self.avgpool = nn.AdaptiveAvgPool2d(output_size=(1, 1))
 
         self.volume_fc = self._make_linear(3 * self._vp_num)
@@ -28,12 +26,11 @@ class VPNet(nn.Module):
         self.translate_fc = self._make_linear(3 * self._vp_num)
 
     def forward(self, imgs):
-        volume_features = self.extract_feature(self.volume_resnet, imgs)
-        transform_features = self.extract_feature(self.transform_resnet, imgs)
+        features = self.extract_feature(imgs)
 
-        volumes = self.volume_fc(volume_features)
-        rotates = self.rotate_fc(transform_features)
-        translates = self.translate_fc(transform_features)
+        volumes = self.volume_fc(features)
+        rotates = self.rotate_fc(features)
+        translates = self.translate_fc(features)
 
         volumes, rotates, translates = self.restrict_range(volumes, rotates, translates)
 
@@ -45,16 +42,16 @@ class VPNet(nn.Module):
 
         return volumes, rotates, translates
 
-    def extract_feature(self, model, imgs):
-        out = model.conv1(imgs)
-        out = model.bn1(out)
-        out = model.relu(out)
-        out = model.maxpool(out)
+    def extract_feature(self, imgs):
+        out = self.resnet.conv1(imgs)
+        out = self.resnet.bn1(out)
+        out = self.resnet.relu(out)
+        out = self.resnet.maxpool(out)
 
-        out = model.layer1(out)
-        out = model.layer2(out)
-        out = model.layer3(out)
-        out = model.layer4(out)
+        out = self.resnet.layer1(out)
+        out = self.resnet.layer2(out)
+        out = self.resnet.layer3(out)
+        out = self.resnet.layer4(out)
 
         out = self.avgpool(out)
         features = out.view(out.size(0), -1)
@@ -62,7 +59,7 @@ class VPNet(nn.Module):
         return features
 
     def fix_volume_weight(self):
-        for p in self.volume_resnet.parameters():
+        for p in self.resnet.parameters():
             p.requires_grad = False
         for p in self.volume_fc.parameters():
             p.requires_grad = False
@@ -74,7 +71,7 @@ class VPNet(nn.Module):
             rotates = tanh(rotates)
             translates = tanh(translates)
         else:
-            volumes = torch.clamp(volumes,  min=VP_CLAMP_MIN + 1e-8, max=VP_CLAMP_MAX)
+            volumes = torch.clamp(volumes, min=VP_CLAMP_MIN + 1e-8, max=VP_CLAMP_MAX)
             rotates = torch.clamp(rotates, min=-1, max=1)
             translates = torch.clamp(translates, min=-1, max=1)
         return volumes, rotates, translates
