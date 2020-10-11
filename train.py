@@ -126,6 +126,9 @@ def calculate_points_loss(predict_points, canonical_points, view_center_points, 
 
 
 def calculate_silhouette_loss(predict_meshes, silhouettes, dists, elevs, azims):
+    if L_SIL == 0:
+        return torch.tensor(0.0).to(DEVICE)
+
     silhouette_loss_func = SilhouetteLoss()
 
     if IS_VIEW_CENTER:
