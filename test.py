@@ -49,7 +49,9 @@ def test(epoch: int):
     avg_cd_loss, n = 0.0, 0
 
     for data in progress_bar:
-        rgbs, points = data['rgb'].to(DEVICE), data['points'].to(DEVICE)
+        rgbs, silhouettes = data['rgb'].to(DEVICE), data['silhouette'].to(DEVICE)
+        canonical_points, view_points = data['canonical_points'].to(DEVICE), data['view_center_points'].to(DEVICE)
+        dists, elevs, azims = data['dist'].to(DEVICE), data['elev'].to(DEVICE), data['azim'].to(DEVICE)
 
         volumes, rotates, translates = model(rgbs)
         predict_points = []
@@ -59,7 +61,9 @@ def test(epoch: int):
             predict_points.append(sampling(volumes[i], rotates[i], translates[i], SAMPLE_NUM))
 
         predict_points = torch.cat(predict_points, dim=1)
-        cd_loss = cd_loss_func(predict_points, points) * L_VIEW_CD
+        cd_loss = cd_loss_func(predict_points, view_points) * L_VIEW_CD if IS_VIEW_CENTER else \
+            cd_loss_func(predict_points, canonical_points) * L_CAN_CD
+
         avg_cd_loss += cd_loss.item()
         n += 1
 
@@ -86,7 +90,7 @@ def test(epoch: int):
     for b in range(BATCH_SIZE):
         img = rgbs[b]
         vp_meshes = batch_vp_meshes[b]
-        Visualizer.render_vp_meshes(img, vp_meshes, os.path.join(dir_path, 'epoch%d-%d.png' % (epoch, b)))
+        Visualizer.render_vp_meshes(img, vp_meshes, os.path.join(dir_path, 'epoch%d-%d.png' % (epoch, b)), SHOW_DIST)
 
 
 if __name__ == '__main__':
