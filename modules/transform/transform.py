@@ -64,6 +64,9 @@ def obj_to_view_points(points: torch.Tensor, dists: torch.Tensor, elevs: torch.T
     q = torch.cat([y, azims], dim=1)
     points = rotate_points(points, q)
 
+    dists = torch.repeat_interleave(dists.unsqueeze(2), repeats=points.size(1), dim=1)
+    dists = torch.repeat_interleave(dists, repeats=points.size(2), dim=2)
+
     points = points / dists
 
     return points
