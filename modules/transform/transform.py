@@ -19,6 +19,27 @@ def check_parameters(points: torch.Tensor, q: torch.Tensor, t: torch.Tensor):
 
 
 def view_to_obj_points(points, dists, elevs, azims):
+    assert points.ndimension() == 3  # (B, N, 3)
+    assert dists.ndimension() == elevs.ndimension() == azims.ndimension() == 1  # (B)
+    dists, elevs, azims = dists.view(-1, 1), elevs.view(-1, 1) / 360, azims.view(-1, 1) / 360
+
+    B = points.size(0)
+    y = torch.tensor([[0, 1, 0]], dtype=torch.float, device=points.device)
+    neg_z = torch.tensor([[0, 0, -1]], dtype=torch.float, device=points.device)
+    y = torch.repeat_interleave(y, repeats=B, dim=0)
+    neg_z = torch.repeat_interleave(neg_z, repeats=B, dim=0)
+
+    q1 = torch.cat([neg_z, elevs], dim=1)
+    y = rotate_points(y.unsqueeze(1), q1).squeeze(1)
+
+    q2 = torch.cat([y, -azims], dim=1)
+    points = rotate_points(points, q2)
+
+    q3 = torch.cat([neg_z, elevs], dim=1)
+    points = rotate_points(points, q3)
+
+    points = points * dists
+
     return points
 
 
