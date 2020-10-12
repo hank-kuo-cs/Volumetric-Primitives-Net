@@ -52,8 +52,8 @@ def obj_to_view_points(points: torch.Tensor, dists: torch.Tensor, elevs: torch.T
     dists, elevs, azims = dists.view(-1, 1), elevs.view(-1, 1) / 360, azims.view(-1, 1) / 360
 
     B = points.size(0)
-    y = torch.repeat_interleave(torch.tensor([[0, 1, 0]], dtype=torch.float, device=points.device), repeats=B, dim=0)
-    neg_z = torch.repeat_interleave(torch.tensor([[0, 0, -1]], dtype=torch.float, device=points.device), repeats=B, dim=0)
+    y = torch.repeat_interleave(torch.tensor([[0, 1, 0]], device=points.device), repeats=B, dim=0).float()
+    neg_z = torch.repeat_interleave(torch.tensor([[0, 0, -1]], device=points.device), repeats=B, dim=0).float()
 
     q = torch.cat([neg_z, elevs], dim=1)
     points = rotate_points(points, q)
