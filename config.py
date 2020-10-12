@@ -1,6 +1,6 @@
 # CUDA
 DEVICE = 'cuda'
-DEVICE_NUM = '5'
+DEVICE_NUM = '6'
 
 # Hyper parameter
 LR = 1e-4
@@ -11,7 +11,7 @@ EPOCH_NUM = 50
 CD_W1 = 1.0
 CD_W2 = 1.0
 L_VIEW_CD = 1.0
-L_CAN_CD = 0.5
+L_CAN_CD = 1.0
 L_SIL = 0.0
 
 
@@ -45,6 +45,7 @@ SHOW_DIST = 2
 IS_VIEW_CENTER = False
 IMG_SIZE = 128
 # airplane, rifle, display, table, telephone, car, chair, bench, lamp, cabinet, loudspeaker, sofa, watercraft
-TRAIN_CLASSES = ['chair']
-TEST_CLASSES = ['chair']
+TRAIN_CLASSES = ['airplane', 'car', 'chair']
+TEST_CLASSES = ['airplane', 'car', 'chair']
+# TEST_CLASSES = ['rifle', 'display', 'table', 'telephone', 'bench', 'lamp', 'cabinet', 'loudspeaker', 'sofa', 'watercraft']
 DATASET_ROOT = '/eva_data/hank'

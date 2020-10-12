@@ -51,7 +51,6 @@ def test(epoch: int):
     for data in progress_bar:
         rgbs, silhouettes = data['rgb'].to(DEVICE), data['silhouette'].to(DEVICE)
         canonical_points, view_points = data['canonical_points'].to(DEVICE), data['view_center_points'].to(DEVICE)
-        dists, elevs, azims = data['dist'].to(DEVICE), data['elev'].to(DEVICE), data['azim'].to(DEVICE)
 
         volumes, rotates, translates = model(rgbs)
         predict_points = []
