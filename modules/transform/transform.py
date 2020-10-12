@@ -38,6 +38,9 @@ def view_to_obj_points(points, dists, elevs, azims):
     q3 = torch.cat([neg_z, elevs], dim=1)
     points = rotate_points(points, q3)
 
+    dists = torch.repeat_interleave(dists.unsqueeze(2), repeats=points.size(1), dim=1)
+    dists = torch.repeat_interleave(dists, repeats=points.size(2), dim=2)
+
     points = points * dists
 
     return points
