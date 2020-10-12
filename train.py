@@ -114,13 +114,12 @@ def calculate_points_loss(predict_points, canonical_points, view_center_points, 
     cd_loss_func = ChamferDistanceLoss()
 
     if not IS_VIEW_CENTER:
-        return torch.tensor(0.0).to(DEVICE), cd_loss_func(predict_points, view_center_points) * L_CAN_CD
+        return torch.tensor(0.0).to(DEVICE), cd_loss_func(predict_points, canonical_points) * L_CAN_CD
 
-    # ToDo: transform points from view-center coordinate to object-center coordinate
-    obj_center_points = view_to_obj_points(predict_points, dists, elevs, azims)
+    predict_canonical_points = view_to_obj_points(predict_points, dists, elevs, azims)
 
     view_center_cd_loss = cd_loss_func(predict_points, view_center_points) * L_VIEW_CD
-    obj_center_cd_loss = cd_loss_func(obj_center_points, canonical_points) * L_CAN_CD
+    obj_center_cd_loss = cd_loss_func(predict_canonical_points, canonical_points) * L_CAN_CD
 
     return view_center_cd_loss, obj_center_cd_loss
 
@@ -148,14 +147,14 @@ def train(args):
     # Training Process
     for epoch_now in range(EPOCH_NUM):
         model.train()
-        epoch_avg_cd_loss, n = 0.0, 0
+        avg_view_cd_loss, avg_obj_cd_loss, n = 0.0, 0.0, 0
 
         progress_bar = tqdm(train_dataloader)
 
         for data in progress_bar:
             rgbs, silhouettes = data['rgb'].to(DEVICE), data['silhouette'].to(DEVICE)
             canonical_points, view_center_points = data['canonical_points'].to(DEVICE), data['view_center_points'].to(DEVICE)
-            dists, elevs, azims = data['dist'].to(DEVICE), data['elev'].to(DEVICE), data['azim'].to(DEVICE)
+            dists, elevs, azims = data['dist'].float().to(DEVICE), data['elev'].float().to(DEVICE), data['azim'].float().to(DEVICE)
 
             volumes, rotates, translates = model(rgbs)
 
@@ -178,11 +177,16 @@ def train(args):
             optimizer.step()
 
             n += 1
-            epoch_avg_cd_loss += view_cd_loss.item()
+            avg_view_cd_loss += view_cd_loss.item()
+            avg_obj_cd_loss += obj_cd_loss.item()
             progress_bar.set_description('View CD Loss = %.6f, Obj CD Loss = %.6f, Sil Loss = %.6f'
                                          % (view_cd_loss.item(), obj_cd_loss.item(), sil_loss.item()))
 
-        print('Epoch %d, avg loss = %.6f\n' % (epoch_now + 1, epoch_avg_cd_loss / n))
+        avg_view_cd_loss /= n
+        avg_obj_cd_loss /= n
+
+        print('Epoch %d. View CD Loss = %.6f. Obj CD Loss = %.6f\n'
+              % (epoch_now + 1, avg_view_cd_loss, avg_obj_cd_loss))
 
         # Record some result
         if (epoch_now + 1) % 5 == 0:
