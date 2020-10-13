@@ -67,7 +67,7 @@ class VPNetOneRes(nn.Module):
     @staticmethod
     def restrict_range(volumes, rotates, translates):
         if IS_SIGMOID:
-            volumes = sigmoid(volumes)
+            volumes = sigmoid(volumes) + 0.1
             rotates = tanh(rotates)
             translates = tanh(translates)
         else:
