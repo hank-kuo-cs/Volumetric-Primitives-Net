@@ -5,7 +5,7 @@ import argparse
 from tqdm import tqdm
 from torch.utils.data import DataLoader
 from torch.optim import Adam
-from modules import VPNet, ShapeNetDataset, Sampling, ChamferDistanceLoss, Meshing, Visualizer, SilhouetteLoss
+from modules import VPNet, VPNetOneRes, ShapeNetDataset, Sampling, ChamferDistanceLoss, Meshing, Visualizer, SilhouetteLoss
 from modules.transform import view_to_obj_points
 from config import *
 
@@ -52,7 +52,8 @@ def load_dataset():
 
 
 def load_model(pretrain_model_path: str):
-    model = VPNet().to(DEVICE)
+    model = VPNet() if BACKBONE == 'vpnet' else VPNetOneRes()
+    model = model.to(DEVICE)
 
     if pretrain_model_path:
         model.load_state_dict(torch.load(pretrain_model_path))

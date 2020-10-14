@@ -20,7 +20,7 @@ IS_NORMALIZE = False
 
 # Network
 MANUAL_SEED = 1234
-BACKBONE = 'resnet18'  # resnet18
+BACKBONE = 'vpnet'  # vpnet, vpnet_oneres
 VP_CLAMP_MIN = 0.01
 VP_CLAMP_MAX = 0.8
 IS_DROPOUT = False

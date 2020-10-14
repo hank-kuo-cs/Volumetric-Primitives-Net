@@ -4,7 +4,7 @@ import random
 import torch
 from tqdm import tqdm
 from torch.utils.data import DataLoader
-from modules import VPNet, ShapeNetDataset, Sampling, ChamferDistanceLoss, Meshing, Visualizer
+from modules import VPNet, ShapeNetDataset, Sampling, ChamferDistanceLoss, Meshing, Visualizer, VPNetOneRes
 from config import *
 
 
@@ -28,6 +28,13 @@ def load_dataset():
     return test_dataloader
 
 
+def load_model(pretrain_model_path):
+    model = VPNet() if BACKBONE == 'vpnet' else VPNetOneRes()
+    model = model.to(DEVICE)
+    model.load_state_dict(torch.load(pretrain_model_path))
+    return model
+
+
 def get_model_path(epoch):
     checkpoint_path = os.path.join(EXPERIMENT_PATH, 'checkpoint')
     return os.path.join(checkpoint_path, 'model_epoch%03d.pth' % epoch)
@@ -36,9 +43,7 @@ def get_model_path(epoch):
 def test(epoch: int):
     test_dataloader = load_dataset()
     model_path = get_model_path(epoch)
-
-    model = VPNet().to(DEVICE)
-    model.load_state_dict(torch.load(model_path))
+    model = load_model(model_path)
 
     cd_loss_func = ChamferDistanceLoss()
     vp_num = CUBOID_NUM + SPHERE_NUM + CONE_NUM
