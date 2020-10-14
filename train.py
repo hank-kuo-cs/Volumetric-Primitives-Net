@@ -5,9 +5,18 @@ import argparse
 from tqdm import tqdm
 from torch.utils.data import DataLoader
 from torch.optim import Adam
-from modules import VPNet, VPNetOneRes, ShapeNetDataset, Sampling, ChamferDistanceLoss, Meshing, Visualizer, SilhouetteLoss
+
+from modules.network import VPNetOneRes, VPNet
+from modules.dataset import ShapeNetDataset
+from modules.meshing import Meshing
+from modules.sampling import Sampling
+from modules.loss import ChamferDistanceLoss, SilhouetteLoss
+from modules.visualize import Visualizer, TensorboardWriter
 from modules.transform import view_to_obj_points
 from config import *
+
+
+tensorboard_writer = TensorboardWriter()
 
 
 def set_seed(manual_seed=MANUAL_SEED):
@@ -138,6 +147,15 @@ def calculate_silhouette_loss(predict_meshes, silhouettes, dists, elevs, azims):
     return silhouette_loss_func(predict_meshes, silhouettes, dists, elevs, azims) * L_SIL
 
 
+def show_loss_one_tensorboard(epoch, avg_losses):
+    if L_VIEW_CD:
+        tensorboard_writer.add_scalar('train/view_cd_loss', epoch, avg_losses['view_cd'])
+    if L_CAN_CD:
+        tensorboard_writer.add_scalar('train/obj_cd_loss', epoch, avg_losses['obj_cd'])
+    if L_SIL:
+        tensorboard_writer.add_scalar('train/silhouette_loss', epoch, avg_losses['sil'])
+
+
 def train(args):
     train_dataloader = load_dataset()
     dir_path, checkpoint_path = set_file_path()
@@ -148,7 +166,8 @@ def train(args):
     # Training Process
     for epoch_now in range(EPOCH_NUM):
         model.train()
-        avg_view_cd_loss, avg_obj_cd_loss, n = 0.0, 0.0, 0
+        avg_losses = {'view_cd': 0.0, 'obj_cd': 0.0, 'sil': 0.0}
+        n = 0
 
         progress_bar = tqdm(train_dataloader)
 
@@ -178,16 +197,19 @@ def train(args):
             optimizer.step()
 
             n += 1
-            avg_view_cd_loss += view_cd_loss.item()
-            avg_obj_cd_loss += obj_cd_loss.item()
+            avg_losses['view_cd'] += view_cd_loss.item()
+            avg_losses['obj_cd'] += obj_cd_loss.item()
+            avg_losses['sil'] += sil_loss.item()
             progress_bar.set_description('View CD Loss = %.6f, Obj CD Loss = %.6f, Sil Loss = %.6f'
                                          % (view_cd_loss.item(), obj_cd_loss.item(), sil_loss.item()))
 
-        avg_view_cd_loss /= n
-        avg_obj_cd_loss /= n
+        avg_losses['view_cd'] /= n
+        avg_losses['obj_cd'] /= n
+        avg_losses['sil'] /= n
 
-        print('Epoch %d. View CD Loss = %.6f. Obj CD Loss = %.6f\n'
-              % (epoch_now + 1, avg_view_cd_loss, avg_obj_cd_loss))
+        print('Epoch %d. View CD Loss = %.6f. Obj CD Loss = %.6f, Sil Loss = %.6f\n'
+              % (epoch_now + 1, avg_losses['view_cd'], avg_losses['obj_cd'], avg_losses['sil']))
+        show_loss_one_tensorboard(epoch_now + 1, avg_losses)
 
         # Record some result
         if (epoch_now + 1) % 5 == 0:

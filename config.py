@@ -14,10 +14,6 @@ L_VIEW_CD = 1.0
 L_CAN_CD = 1.0
 L_SIL = 0.0
 
-
-# Dataset
-IS_NORMALIZE = False
-
 # Network
 MANUAL_SEED = 1234
 BACKBONE = 'vpnet'  # vpnet, vpnet_oneres
@@ -29,23 +25,26 @@ VOLUME_RESTRICT = [8, 10, 10]
 SILHOUETTE_LOSS_FUNC = 'L1'  # L1 or MSE
 IS_FIX_VOLUME = False
 
-# Path
-EXPERIMENT_PATH = 'experiment'
-LITTLE_NUM = {'train': 100, 'test': 20}
-
 # Volumetric Primitives
 CUBOID_NUM = 8
 SPHERE_NUM = 8
 CONE_NUM = 0
 
 # Visualize
+EXPERIMENT_PATH = 'experiment'
 SHOW_DIST = 2
+TENSORBOARD_PATH = '/home/hank/3d/Tensorboard'
+EXPERIMENT_NAME = 'view_center_add_can_cd_loss'
 
 # Dataset
+DATASET_ROOT = '/eva_data/hank'
 IS_VIEW_CENTER = False
+IS_NORMALIZE = False
+LITTLE_NUM = {'train': 100, 'test': 20}
 IMG_SIZE = 128
+
 # airplane, rifle, display, table, telephone, car, chair, bench, lamp, cabinet, loudspeaker, sofa, watercraft
 TRAIN_CLASSES = ['airplane', 'car', 'chair']
 TEST_CLASSES = ['airplane', 'car', 'chair']
-# TEST_CLASSES = ['rifle', 'display', 'table', 'telephone', 'bench', 'lamp', 'cabinet', 'loudspeaker', 'sofa', 'watercraft']
-DATASET_ROOT = '/eva_data/hank'
+# TEST_CLASSES = ['rifle', 'display', 'table', 'telephone',
+# 'bench', 'lamp', 'cabinet', 'loudspeaker', 'sofa', 'watercraft']
