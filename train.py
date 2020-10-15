@@ -6,7 +6,7 @@ from tqdm import tqdm
 from torch.utils.data import DataLoader
 from torch.optim import Adam
 
-from modules.network import VPNetOneRes, VPNet
+from modules.network import VPNetOneRes, VPNetTwoRes
 from modules.dataset import ShapeNetDataset
 from modules.meshing import Meshing
 from modules.sampling import Sampling
@@ -61,7 +61,7 @@ def load_dataset():
 
 
 def load_model(pretrain_model_path: str):
-    model = VPNet() if BACKBONE == 'vpnet' else VPNetOneRes()
+    model = VPNetOneRes() if BACKBONE == 'vpnet_oneres' else VPNetTwoRes()
     model = model.to(DEVICE)
 
     if pretrain_model_path:
@@ -71,6 +71,25 @@ def load_model(pretrain_model_path: str):
         model.fix_volume_weight()
 
     return model
+
+
+def load_optimizer(model):
+    if not IS_DECAY_VOLUME_RES:
+        return Adam(params=model.parameters(), lr=LR, betas=(0.9, 0.99), weight_decay=W_DECAY)
+
+    if BACKBONE == 'vpnet_oneres':
+        return Adam(params=[
+            {'params': model.parameters},
+            {'params': model.resnet.parameters, 'lr': LR * DECAY_VOLUME_RES_RATE},
+            {'params': model.volume_fc, 'lr': LR * DECAY_VOLUME_RES_RATE},
+        ], lr=LR, betas=(0.9, 0.99), weight_decay=W_DECAY)
+
+    elif BACKBONE == 'vpnet_twores':
+        return Adam(params=[
+            {'params': model.parameters},
+            {'params': model.volume_resnet.parameters, 'lr': LR * DECAY_VOLUME_RES_RATE},
+            {'params': model.volume_fc, 'lr': LR * DECAY_VOLUME_RES_RATE},
+        ], lr=LR, betas=(0.9, 0.99), weight_decay=W_DECAY)
 
 
 def sample_predict_points(volumes, rotates, translates):
@@ -161,7 +180,7 @@ def train(args):
     dir_path, checkpoint_path = set_file_path()
 
     model = load_model(args.pretrain_model)
-    optimizer = Adam(params=model.parameters(), lr=LR, betas=(0.9, 0.99), weight_decay=W_DECAY)
+    optimizer = load_optimizer(model)
 
     # Training Process
     for epoch_now in range(EPOCH_NUM):

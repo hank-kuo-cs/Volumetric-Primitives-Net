@@ -8,7 +8,7 @@ sigmoid = nn.Sigmoid()
 tanh = nn.Tanh()
 
 
-class VPNet(nn.Module):
+class VPNetTwoRes(nn.Module):
     """
     Volumetric Primitive Net:
     Assemble some volumetric primitives (spheres, cuboids and cones) to reconstruct target 3D mesh.

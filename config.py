@@ -16,7 +16,7 @@ L_SIL = 0.0
 
 # Network
 MANUAL_SEED = 1234
-BACKBONE = 'vpnet'  # vpnet, vpnet_oneres
+BACKBONE = 'vpnet_oneres'  # vpnet_twores, vpnet_oneres
 VP_CLAMP_MIN = 0.01
 VP_CLAMP_MAX = 0.8
 IS_DROPOUT = False
@@ -24,6 +24,8 @@ IS_SIGMOID = True
 VOLUME_RESTRICT = [8, 10, 10]
 SILHOUETTE_LOSS_FUNC = 'L1'  # L1 or MSE
 IS_FIX_VOLUME = False
+IS_DECAY_VOLUME_RES = False
+DECAY_VOLUME_RES_RATE = 0.1
 
 # Volumetric Primitives
 CUBOID_NUM = 8

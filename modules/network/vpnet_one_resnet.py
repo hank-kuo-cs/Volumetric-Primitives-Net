@@ -59,8 +59,8 @@ class VPNetOneRes(nn.Module):
         return features
 
     def fix_volume_weight(self):
-        for p in self.resnet.parameters():
-            p.requires_grad = False
+        # for p in self.resnet.parameters():
+        #     p.requires_grad = False
         for p in self.volume_fc.parameters():
             p.requires_grad = False
 

@@ -4,7 +4,7 @@ import random
 import torch
 from tqdm import tqdm
 from torch.utils.data import DataLoader
-from modules import VPNet, ShapeNetDataset, Sampling, ChamferDistanceLoss, Meshing, Visualizer, VPNetOneRes
+from modules import VPNetTwoRes, ShapeNetDataset, Sampling, ChamferDistanceLoss, Meshing, Visualizer, VPNetOneRes
 from config import *
 
 
@@ -22,14 +22,14 @@ def set_seed(manual_seed=MANUAL_SEED):
 def load_dataset():
     print('Load dataset...')
     test_dataset = ShapeNetDataset('test')
-    test_dataloader = DataLoader(dataset=test_dataset, batch_size=BATCH_SIZE, shuffle=True, num_workers=4)
+    test_dataloader = DataLoader(dataset=test_dataset, batch_size=BATCH_SIZE, shuffle=False, num_workers=4)
     print('Dataset size =', len(test_dataset))
 
     return test_dataloader
 
 
 def load_model(pretrain_model_path):
-    model = VPNet() if BACKBONE == 'vpnet' else VPNetOneRes()
+    model = VPNetOneRes() if BACKBONE == 'vpnet_oneres' else VPNetTwoRes()
     model = model.to(DEVICE)
     model.load_state_dict(torch.load(pretrain_model_path))
     return model
