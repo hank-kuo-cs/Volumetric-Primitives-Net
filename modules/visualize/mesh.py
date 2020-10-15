@@ -4,7 +4,7 @@ from kaolin.rep import TriangleMesh
 from .render import render, to_pil, concat_pil_image
 
 
-def visualize_mesh_with_gif(image: torch.Tensor, mesh: TriangleMesh, save_name: str):
+def visualize_mesh_with_gif(image: torch.Tensor, mesh: TriangleMesh, save_name: str, dist: float):
     image = to_pil(image.cpu()).resize((256, 256), Image.BILINEAR)
 
     vertices = mesh.vertices[None]
@@ -15,7 +15,7 @@ def visualize_mesh_with_gif(image: torch.Tensor, mesh: TriangleMesh, save_name: 
     for azim in range(0, 360, 30):
         imgs = [image]
         for elev in range(-30, 60, 30):
-            imgs.append(render(vertices, faces, colors, 2.0, elev, azim))
+            imgs.append(render(vertices, faces, colors, dist, elev, azim))
 
         gif_imgs.append(concat_pil_image(imgs))
 

@@ -10,8 +10,8 @@ class Visualizer:
         visualize_vp_meshes_with_gif(image, vp_meshes, save_name, dist=dist)
 
     @staticmethod
-    def render_mesh_gif(image: torch.Tensor, mesh: TriangleMesh, save_name: str):
-        visualize_mesh_with_gif(image, mesh, save_name)
+    def render_mesh_gif(image: torch.Tensor, mesh: TriangleMesh, save_name: str, dist: float):
+        visualize_mesh_with_gif(image, mesh, save_name, dist)
 
     @staticmethod
     def render_mesh_3pose(image: torch.Tensor, mesh: TriangleMesh, save_name: str,

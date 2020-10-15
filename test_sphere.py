@@ -80,8 +80,9 @@ def test(epoch: int):
     avg_cd_loss, n = 0.0, 0
 
     for data in progress_bar:
-        rgbs, silhouettes, points = data['rgb'].to(DEVICE), data['silhouette'].to(DEVICE), data['points'].to(DEVICE)
-        dists, elevs, azims = data['dist'].to(DEVICE), data['elev'].to(DEVICE), data['azim'].to(DEVICE)
+        rgbs, silhouettes = data['rgb'].to(DEVICE), data['silhouette'].to(DEVICE)
+        canonical_points, view_center_points = data['canonical_points'].to(DEVICE), data['view_center_points'].to(DEVICE)
+        dists, elevs, azims = data['dist'].float().to(DEVICE), data['elev'].float().to(DEVICE), data['azim'].float().to(DEVICE)
 
         sphere_meshes = load_sphere_meshes()
         vertices_offset = model(rgbs)
@@ -89,7 +90,8 @@ def test(epoch: int):
         # Chamfer Distance Loss
         predict_meshes = deform_meshes(sphere_meshes, vertices_offset)
         predict_points = sample_points(predict_meshes)
-        cd_loss = cd_loss_func(predict_points, points) * L_VIEW_CD
+        cd_loss = cd_loss_func(predict_points, view_center_points) * L_VIEW_CD if IS_VIEW_CENTER \
+            else cd_loss_func(predict_points, canonical_points) * L_CAN_CD
 
         avg_cd_loss += cd_loss.item()
         n += 1
@@ -109,8 +111,14 @@ def test(epoch: int):
         img, mesh = rgbs[b], predict_meshes[b]
         dist, elev, azim = dists[b].item(), elevs[b].item(), azims[b].item()
 
-        save_name = os.path.join(dir_path, 'epoch%d-%d.png' % (epoch, b))
+        if IS_VIEW_CENTER:
+            dist, elev, azim = 1.0, 0.0, 0.0
+
+        save_name = os.path.join(dir_path, 'epoch%d-%d-3pose.png' % (epoch, b))
         Visualizer.render_mesh_3pose(img, mesh, save_name, dist, elev, azim)
+
+        save_name = os.path.join(dir_path, 'epoch%d-%d.png' % (epoch, b))
+        Visualizer.render_mesh_gif(img, mesh, save_name, SHOW_DIST)
 
 
 if __name__ == '__main__':

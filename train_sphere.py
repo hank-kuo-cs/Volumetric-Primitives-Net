@@ -92,8 +92,9 @@ def train():
         progress_bar = tqdm(train_dataloader)
 
         for data in progress_bar:
-            rgbs, silhouettes, points = data['rgb'].to(DEVICE), data['silhouette'].to(DEVICE), data['points'].to(DEVICE)
-            dists, elevs, azims = data['dist'].to(DEVICE), data['elev'].to(DEVICE), data['azim'].to(DEVICE)
+            rgbs, silhouettes = data['rgb'].to(DEVICE), data['silhouette'].to(DEVICE)
+            canonical_points, view_center_points = data['canonical_points'].to(DEVICE), data['view_center_points'].to(DEVICE)
+            dists, elevs, azims = data['dist'].float().to(DEVICE), data['elev'].float().to(DEVICE), data['azim'].float().to(DEVICE)
 
             sphere_meshes = load_sphere_meshes()
             vertices_offset = model(rgbs)
@@ -101,9 +102,13 @@ def train():
             # Chamfer Distance Loss
             predict_meshes = deform_meshes(sphere_meshes, vertices_offset)
             predict_points = sample_points(predict_meshes)
-            cd_loss = cd_loss_func(predict_points, points) * L_VIEW_CD
+            cd_loss = cd_loss_func(predict_points, view_center_points) * L_VIEW_CD if IS_VIEW_CENTER \
+                else cd_loss_func(predict_points, canonical_points) * L_CAN_CD
 
             # Silhouette Loss
+            if IS_VIEW_CENTER:
+                dists = torch.full_like(dists, fill_value=1.0).to(DEVICE)
+                elevs, azims = torch.zeros_like(elevs).to(DEVICE), torch.zeros_like(azims).to(DEVICE)
             sil_loss = silhouette_loss_func(predict_meshes, silhouettes, dists, elevs, azims) * L_SIL
 
             total_loss = cd_loss + sil_loss
@@ -123,8 +128,8 @@ def train():
             for b in range(BATCH_SIZE):
                 img = rgbs[b]
                 predict_mesh = predict_meshes[b]
-                Visualizer.render_mesh_gif(img, predict_mesh,
-                                           os.path.join(dir_path, 'epoch%d-%d.png' % (epoch_now + 1, b)))
+                save_name = os.path.join(dir_path, 'epoch%d-%d.png' % (epoch_now + 1, b))
+                Visualizer.render_mesh_gif(img, predict_mesh, save_name, SHOW_DIST)
 
             torch.save(model.state_dict(), os.path.join(checkpoint_path, 'model_epoch%03d.pth' % (epoch_now + 1)))
 
