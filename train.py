@@ -65,9 +65,11 @@ def load_model(pretrain_model_path: str):
     model = model.to(DEVICE)
 
     if pretrain_model_path:
+        print('Load pretrianed model:', pretrain_model_path)
         model.load_state_dict(torch.load(pretrain_model_path))
 
     if IS_FIX_VOLUME:
+        print('Fix volume weight...')
         model.fix_volume_weight()
 
     return model
@@ -76,6 +78,8 @@ def load_model(pretrain_model_path: str):
 def load_optimizer(model):
     if not IS_DECAY_VOLUME_RES:
         return Adam(params=model.parameters(), lr=LR, betas=(0.9, 0.99), weight_decay=W_DECAY)
+
+    print('Optimizer use different lr...')
 
     if BACKBONE == 'vpnet_oneres':
         return Adam(params=[
