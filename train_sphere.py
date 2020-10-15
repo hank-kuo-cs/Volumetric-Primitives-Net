@@ -6,7 +6,11 @@ from kaolin.rep import TriangleMesh
 from torch.utils.data import DataLoader
 from torch.optim import Adam
 from modules import SDNet, ShapeNetDataset, ChamferDistanceLoss, Visualizer, SilhouetteLoss
+from modules.visualize import TensorboardWriter
 from config import *
+
+
+tensorboard_writer = TensorboardWriter()
 
 
 def set_seed(manual_seed=MANUAL_SEED):
@@ -74,6 +78,10 @@ def sample_points(meshes: list):
     return points
 
 
+def show_loss_one_tensorboard(epoch, cd_loss):
+    tensorboard_writer.add_scalar('train/sphere_cd_loss', epoch, cd_loss)
+
+
 def train():
     train_dataloader = load_dataset()
     dir_path, checkpoint_path = set_file_path()
@@ -122,6 +130,7 @@ def train():
             progress_bar.set_description('CD Loss = %.6f, Sil Loss = %.6f' % (cd_loss.item(), sil_loss.item()))
 
         print('Epoch %d, avg loss = %.6f\n' % (epoch_now + 1, epoch_avg_cd_loss / n))
+        show_loss_one_tensorboard(epoch_now + 1, epoch_avg_cd_loss / n)
 
         # Record some result
         if (epoch_now + 1) % 5 == 0:
