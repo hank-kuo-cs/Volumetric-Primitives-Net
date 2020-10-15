@@ -101,7 +101,7 @@ def train():
             # Chamfer Distance Loss
             predict_meshes = deform_meshes(sphere_meshes, vertices_offset)
             predict_points = sample_points(predict_meshes)
-            cd_loss = cd_loss_func(predict_points, points) * L_CD
+            cd_loss = cd_loss_func(predict_points, points) * L_VIEW_CD
 
             # Silhouette Loss
             sil_loss = silhouette_loss_func(predict_meshes, silhouettes, dists, elevs, azims) * L_SIL
