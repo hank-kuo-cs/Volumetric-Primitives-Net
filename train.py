@@ -79,16 +79,16 @@ def load_optimizer(model):
 
     if BACKBONE == 'vpnet_oneres':
         return Adam(params=[
-            {'params': model.parameters},
-            {'params': model.resnet.parameters, 'lr': LR * DECAY_VOLUME_RES_RATE},
-            {'params': model.volume_fc, 'lr': LR * DECAY_VOLUME_RES_RATE},
+            {'params': model.parameters()},
+            {'params': model.resnet.parameters(), 'lr': LR * DECAY_VOLUME_RES_RATE},
+            {'params': model.volume_fc.parameters(), 'lr': LR * DECAY_VOLUME_RES_RATE},
         ], lr=LR, betas=(0.9, 0.99), weight_decay=W_DECAY)
 
     elif BACKBONE == 'vpnet_twores':
         return Adam(params=[
-            {'params': model.parameters},
-            {'params': model.volume_resnet.parameters, 'lr': LR * DECAY_VOLUME_RES_RATE},
-            {'params': model.volume_fc, 'lr': LR * DECAY_VOLUME_RES_RATE},
+            {'params': model.parameters()},
+            {'params': model.volume_resnet.parameters(), 'lr': LR * DECAY_VOLUME_RES_RATE},
+            {'params': model.volume_fc.parameters(), 'lr': LR * DECAY_VOLUME_RES_RATE},
         ], lr=LR, betas=(0.9, 0.99), weight_decay=W_DECAY)
 
 
