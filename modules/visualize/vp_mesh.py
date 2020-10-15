@@ -19,8 +19,9 @@ def visualize_vp_meshes_with_gif(image: torch.Tensor, vp_meshes: list, save_name
     faces = mesh.faces
 
     gif_imgs = []
+    render_img_direct_pose = render(vertices, faces, colors, dist, 0, 0)
     for azim in range(0, 360, 30):
-        imgs = [image]
+        imgs = [image, render_img_direct_pose]
         for elev in range(-30, 60, 30):
             imgs.append(render(vertices, faces, colors, dist, elev, azim))
 
