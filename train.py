@@ -12,7 +12,7 @@ from modules.meshing import Meshing
 from modules.sampling import Sampling
 from modules.loss import ChamferDistanceLoss, SilhouetteLoss
 from modules.visualize import Visualizer, TensorboardWriter
-from modules.transform import view_to_obj_points
+from modules.transform import view_to_obj_points, rotate_points_consistent_with_images
 from config import *
 
 
@@ -146,13 +146,13 @@ def compose_vp_meshes(batch_vp_meshes):
     return batch_meshes
 
 
-def calculate_points_loss(predict_points, canonical_points, view_center_points, dists, elevs, azims):
+def calculate_points_loss(predict_points, canonical_points, view_center_points, dists, elevs, azims, angles):
     cd_loss_func = ChamferDistanceLoss()
 
     if not IS_VIEW_CENTER:
         return torch.tensor(0.0).to(DEVICE), cd_loss_func(predict_points, canonical_points) * L_CAN_CD
 
-    predict_canonical_points = view_to_obj_points(predict_points, dists, elevs, azims)
+    predict_canonical_points = view_to_obj_points(predict_points, dists, elevs, azims, angles)
 
     view_center_cd_loss = cd_loss_func(predict_points, view_center_points) * L_VIEW_CD
     obj_center_cd_loss = cd_loss_func(predict_canonical_points, canonical_points) * L_CAN_CD
@@ -199,8 +199,11 @@ def train(args):
 
         for data in progress_bar:
             rgbs, silhouettes = data['rgb'].to(DEVICE), data['silhouette'].to(DEVICE)
+            rotate_angles = data['rotate_angle'].float().to(DEVICE)
             canonical_points, view_center_points = data['canonical_points'].to(DEVICE), data['view_center_points'].to(DEVICE)
             dists, elevs, azims = data['dist'].float().to(DEVICE), data['elev'].float().to(DEVICE), data['azim'].float().to(DEVICE)
+
+            view_center_points = rotate_points_consistent_with_images(view_center_points, rotate_angles)
 
             volumes, rotates, translates = model(rgbs)
 
@@ -208,7 +211,7 @@ def train(args):
             predict_points = sample_predict_points(volumes, rotates, translates)
 
             view_cd_loss, obj_cd_loss = calculate_points_loss(predict_points, canonical_points, view_center_points,
-                                                              dists, elevs, azims)
+                                                              dists, elevs, azims, rotate_angles)
 
             # Silhouette Loss
             batch_vp_meshes = get_vp_meshes(volumes, rotates, translates)

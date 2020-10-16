@@ -37,7 +37,7 @@ class ShapeNetDataset(Dataset):
         shapenet_data = self.shapenet_datas[item]
 
         dist, elev, azim = shapenet_data.dist, shapenet_data.elev, shapenet_data.azim
-        rgb, silhouette = self._load_rgb_and_silhouette(shapenet_data.img_path)
+        rgb, silhouette, rotate_angle = self._load_rgb_and_silhouette(shapenet_data.img_path)
 
         canonical_points = self._load_sample_points(shapenet_data.canonical_obj_path)
         view_center_points = self._load_sample_points(shapenet_data.view_center_obj_path)
@@ -48,6 +48,7 @@ class ShapeNetDataset(Dataset):
             'canonical_points': canonical_points,
             'view_center_points': view_center_points,
             'class_index': shapenet_data.class_index,
+            'rotate_angle': rotate_angle,
             'dist': dist,
             'elev': elev,
             'azim': azim
@@ -106,16 +107,31 @@ class ShapeNetDataset(Dataset):
 
         return imgs_path, azims, elevs, dists
 
-    @staticmethod
-    def _load_rgb_and_silhouette(img_path: str) -> (torch.Tensor, torch.Tensor):
+    def _load_rgb_and_silhouette(self, img_path: str) -> (torch.Tensor, torch.Tensor):
+        angle = 0.0
         img = Image.open(img_path)
         img = img_transform(img)
+
+        if AUGMENT_3D['rotate'] and self.dataset_type == 'train':
+            img, angle = self.rotate_img(img)
+
         rgb, silhouette = img[:3], img[3].unsqueeze(0)
 
         if IS_NORMALIZE:
             rgb = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])(rgb)
 
-        return rgb, silhouette
+        return rgb, silhouette, angle
+
+    @staticmethod
+    def rotate_img(img: torch.Tensor) -> (torch.Tensor, float):
+        angle = torch.rand(1) * 360
+        rotate_transform = transforms.Compose([
+            transforms.ToPILImage(),
+            transforms.RandomRotation((angle, angle)),
+            transforms.ToTensor()
+        ])
+
+        return rotate_transform(img), angle
 
     @staticmethod
     def _load_meta(meta_path: str) -> (list, list, list):

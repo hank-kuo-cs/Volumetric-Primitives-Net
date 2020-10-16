@@ -44,6 +44,7 @@ IS_VIEW_CENTER = False
 IS_NORMALIZE = False
 LITTLE_NUM = {'train': 100, 'test': 20}
 IMG_SIZE = 128
+AUGMENT_3D = {'rotate': True, 'cutmix': False}
 
 # airplane, rifle, display, table, telephone, car, chair, bench, lamp, cabinet, loudspeaker, sofa, watercraft
 TRAIN_CLASSES = ['airplane', 'car', 'chair']
