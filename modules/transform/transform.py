@@ -16,3 +16,57 @@ def check_parameters(points: torch.Tensor, q: torch.Tensor, t: torch.Tensor):
 
     assert q.size() == (B, 4)
     assert t.size() == (B, 3)
+
+
+def view_to_obj_points(points, dists, elevs, azims):
+    assert points.ndimension() == 3  # (B, N, 3)
+    assert dists.ndimension() == elevs.ndimension() == azims.ndimension() == 1  # (B)
+    dists, elevs, azims = dists.view(-1, 1), elevs.view(-1, 1) / 360, azims.view(-1, 1) / 360
+
+    B = points.size(0)
+    y = torch.tensor([[0, 1, 0]], device=points.device)
+    neg_z = torch.tensor([[0, 0, -1]], device=points.device)
+    y = torch.repeat_interleave(y, repeats=B, dim=0).float()
+    neg_z = torch.repeat_interleave(neg_z, repeats=B, dim=0).float()
+
+    q1 = torch.cat([neg_z, elevs], dim=1)
+    y = rotate_points(y.unsqueeze(1), q1).squeeze(1)
+
+    q2 = torch.cat([y, -azims], dim=1)
+    points = rotate_points(points, q2)
+
+    q3 = torch.cat([neg_z, -elevs], dim=1)
+    points = rotate_points(points, q3)
+
+    dists = torch.repeat_interleave(dists.unsqueeze(2), repeats=points.size(1), dim=1)
+    dists = torch.repeat_interleave(dists, repeats=points.size(2), dim=2)
+
+    points = points * dists
+
+    return points
+
+
+def obj_to_view_points(points: torch.Tensor, dists: torch.Tensor, elevs: torch.Tensor, azims: torch.Tensor):
+    assert points.ndimension() == 3  # (B, N, 3)
+    assert dists.ndimension() == elevs.ndimension() == azims.ndimension() == 1  # (B)
+    dists, elevs, azims = dists.view(-1, 1), elevs.view(-1, 1) / 360, azims.view(-1, 1) / 360
+
+    B = points.size(0)
+    y = torch.repeat_interleave(torch.tensor([[0, 1, 0]], device=points.device), repeats=B, dim=0).float()
+    neg_z = torch.repeat_interleave(torch.tensor([[0, 0, -1]], device=points.device), repeats=B, dim=0).float()
+
+    q = torch.cat([neg_z, elevs], dim=1)
+    points = rotate_points(points, q)
+
+    y = y.unsqueeze(1)
+    y = rotate_points(y, q).squeeze(1)
+
+    q = torch.cat([y, azims], dim=1)
+    points = rotate_points(points, q)
+
+    dists = torch.repeat_interleave(dists.unsqueeze(2), repeats=points.size(1), dim=1)
+    dists = torch.repeat_interleave(dists, repeats=points.size(2), dim=2)
+
+    points = points / dists
+
+    return points

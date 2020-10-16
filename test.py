@@ -4,7 +4,7 @@ import random
 import torch
 from tqdm import tqdm
 from torch.utils.data import DataLoader
-from modules import VPNet, ShapeNetDataset, Sampling, ChamferDistanceLoss, Meshing, Visualizer
+from modules import VPNetTwoRes, ShapeNetDataset, Sampling, ChamferDistanceLoss, Meshing, Visualizer, VPNetOneRes
 from config import *
 
 
@@ -22,10 +22,17 @@ def set_seed(manual_seed=MANUAL_SEED):
 def load_dataset():
     print('Load dataset...')
     test_dataset = ShapeNetDataset('test')
-    test_dataloader = DataLoader(dataset=test_dataset, batch_size=BATCH_SIZE, shuffle=True, num_workers=4)
+    test_dataloader = DataLoader(dataset=test_dataset, batch_size=BATCH_SIZE, shuffle=False, num_workers=4)
     print('Dataset size =', len(test_dataset))
 
     return test_dataloader
+
+
+def load_model(pretrain_model_path):
+    model = VPNetOneRes() if BACKBONE == 'vpnet_oneres' else VPNetTwoRes()
+    model = model.to(DEVICE)
+    model.load_state_dict(torch.load(pretrain_model_path))
+    return model
 
 
 def get_model_path(epoch):
@@ -36,9 +43,7 @@ def get_model_path(epoch):
 def test(epoch: int):
     test_dataloader = load_dataset()
     model_path = get_model_path(epoch)
-
-    model = VPNet().to(DEVICE)
-    model.load_state_dict(torch.load(model_path))
+    model = load_model(model_path)
 
     cd_loss_func = ChamferDistanceLoss()
     vp_num = CUBOID_NUM + SPHERE_NUM + CONE_NUM
@@ -46,10 +51,11 @@ def test(epoch: int):
     model.eval()
 
     progress_bar = tqdm(test_dataloader)
-    cd_loss, n = 0.0, 0
+    avg_cd_loss, n = 0.0, 0
 
     for data in progress_bar:
-        rgbs, points = data[0].to(DEVICE), data[2].to(DEVICE)
+        rgbs, silhouettes = data['rgb'].to(DEVICE), data['silhouette'].to(DEVICE)
+        canonical_points, view_points = data['canonical_points'].to(DEVICE), data['view_center_points'].to(DEVICE)
 
         volumes, rotates, translates = model(rgbs)
         predict_points = []
@@ -59,10 +65,14 @@ def test(epoch: int):
             predict_points.append(sampling(volumes[i], rotates[i], translates[i], SAMPLE_NUM))
 
         predict_points = torch.cat(predict_points, dim=1)
-        cd_loss += cd_loss_func(predict_points, points).item()
+        cd_loss = cd_loss_func(predict_points, view_points) * L_VIEW_CD if IS_VIEW_CENTER else \
+            cd_loss_func(predict_points, canonical_points) * L_CAN_CD
+
+        avg_cd_loss += cd_loss.item()
         n += 1
 
-    print('Epoch %d, avg cd loss = %.6f' % (epoch, cd_loss / n))
+    avg_cd_loss /= n
+    print('Epoch %d, avg cd loss = %.6f' % (epoch, avg_cd_loss))
 
     # Record some result
     volumes, rotates, translates = model(rgbs)
@@ -84,7 +94,7 @@ def test(epoch: int):
     for b in range(BATCH_SIZE):
         img = rgbs[b]
         vp_meshes = batch_vp_meshes[b]
-        Visualizer.render_vp_meshes(img, vp_meshes, os.path.join(dir_path, 'epoch%d-%d.png' % (epoch, b)))
+        Visualizer.render_vp_meshes(img, vp_meshes, os.path.join(dir_path, 'epoch%d-%d.png' % (epoch, b)), SHOW_DIST)
 
 
 if __name__ == '__main__':
