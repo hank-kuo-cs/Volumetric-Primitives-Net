@@ -131,7 +131,7 @@ class ShapeNetDataset(Dataset):
             transforms.ToTensor()
         ])
 
-        return rotate_transform(img), angle
+        return rotate_transform(img), angle.item()
 
     @staticmethod
     def _load_meta(meta_path: str) -> (list, list, list):
