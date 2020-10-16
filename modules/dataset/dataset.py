@@ -8,13 +8,10 @@ from torch.utils.data import Dataset
 from torchvision.transforms import transforms
 from kaolin.rep import TriangleMesh
 from .data import ShapeNetData
+from .classes import Classes
 from ..transform.rotate import rotate_points
 from config import *
 
-
-class_dict = {'airplane': '02691156', 'rifle': '04090263', 'display': '03211117', 'table': '04379243',
-              'telephone': '04401088', 'car': '02958343', 'chair': '03001627', 'bench': '02828884', 'lamp': '03636649',
-              'cabinet': '02933112', 'loudspeaker': '03691459', 'sofa': '04256520', 'watercraft': '04530566'}
 
 img_transform = transforms.Compose([
     transforms.Resize(IMG_SIZE),
@@ -50,6 +47,7 @@ class ShapeNetDataset(Dataset):
             'silhouette': silhouette,
             'canonical_points': canonical_points,
             'view_center_points': view_center_points,
+            'class_index': shapenet_data.class_index,
             'dist': dist,
             'elev': elev,
             'azim': azim
@@ -61,7 +59,7 @@ class ShapeNetDataset(Dataset):
 
         dataset_indices = self.split_data['train'] if self.dataset_type == 'train' else self.split_data['test']
 
-        class_ids = [class_dict[class_name] for class_name in CLASSES]
+        class_ids = [Classes.get_id_by_name(class_name) for class_name in CLASSES]
         class_model_num = [0 for class_name in CLASSES]
 
         for i in tqdm(range(len(dataset_indices))):
@@ -84,6 +82,7 @@ class ShapeNetDataset(Dataset):
                 shapenet_data = ShapeNetData(img_path=imgs_path[j],
                                              canonical_obj_path=object_center_obj_path,
                                              view_center_obj_path=view_center_objs_path[j],
+                                             class_index=Classes.get_class_index_by_id(class_id),
                                              dist=dists[j], elev=elevs[j], azim=azims[j])
                 self.shapenet_datas.append(shapenet_data)
 

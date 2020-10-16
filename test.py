@@ -4,8 +4,12 @@ import random
 import torch
 from tqdm import tqdm
 from torch.utils.data import DataLoader
-from modules import VPNetTwoRes, ShapeNetDataset, Sampling, ChamferDistanceLoss, Meshing, Visualizer, VPNetOneRes
+from modules import VPNetOneRes, VPNetTwoRes, Sampling, ChamferDistanceLoss, Meshing, Visualizer
+from modules.dataset import Classes, ShapeNetDataset
 from config import *
+
+
+class_names = Classes.get_class_names()
 
 
 def set_seed(manual_seed=MANUAL_SEED):
@@ -52,10 +56,14 @@ def test(epoch: int):
 
     progress_bar = tqdm(test_dataloader)
     avg_cd_loss, n = 0.0, 0
+    class_avg_cd_losses = [0.0 for i in range(len(class_names))]
+    class_ns = [0 for i in range(len(class_names))]
 
     for data in progress_bar:
         rgbs, silhouettes = data['rgb'].to(DEVICE), data['silhouette'].to(DEVICE)
         canonical_points, view_points = data['canonical_points'].to(DEVICE), data['view_center_points'].to(DEVICE)
+        class_index = data['class_index']
+        dists, elevs, azims = data['dist'].float().to(DEVICE), data['elev'].float().to(DEVICE), data['azim'].float().to(DEVICE)
 
         volumes, rotates, translates = model(rgbs)
         predict_points = []
@@ -69,10 +77,20 @@ def test(epoch: int):
             cd_loss_func(predict_points, canonical_points) * L_CAN_CD
 
         avg_cd_loss += cd_loss.item()
+        class_avg_cd_losses[class_index] += cd_loss.item()
+        class_ns[class_index] += 1
         n += 1
 
     avg_cd_loss /= n
-    print('Epoch %d, avg cd loss = %.6f' % (epoch, avg_cd_loss))
+    print('\nEpoch %d\n============================' % epoch)
+
+    for i in range(len(class_avg_cd_losses)):
+        if class_ns[i] == 0:
+            continue
+        class_avg_cd_losses[i] /= class_ns[i]
+        print(class_names[i], 'avg cd loss =%.6f' % class_avg_cd_losses[i])
+
+    print('============================\ntotal avg cd loss = %.6f' % avg_cd_loss)
 
     # Record some result
     volumes, rotates, translates = model(rgbs)
