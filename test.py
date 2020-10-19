@@ -62,8 +62,8 @@ def test(epoch: int):
     for data in progress_bar:
         rgbs, silhouettes = data['rgb'].to(DEVICE), data['silhouette'].to(DEVICE)
         canonical_points, view_points = data['canonical_points'].to(DEVICE), data['view_center_points'].to(DEVICE)
-        class_index = data['class_index']
-        dists, elevs, azims = data['dist'].float().to(DEVICE), data['elev'].float().to(DEVICE), data['azim'].float().to(DEVICE)
+        class_indices = data['class_index']
+        # dists, elevs, azims = data['dist'].float().to(DEVICE), data['elev'].float().to(DEVICE), data['azim'].float().to(DEVICE)
 
         volumes, rotates, translates = model(rgbs)
         predict_points = []
@@ -73,12 +73,13 @@ def test(epoch: int):
             predict_points.append(sampling(volumes[i], rotates[i], translates[i], SAMPLE_NUM))
 
         predict_points = torch.cat(predict_points, dim=1)
-        cd_loss = cd_loss_func(predict_points, view_points) * L_VIEW_CD if IS_VIEW_CENTER else \
-            cd_loss_func(predict_points, canonical_points) * L_CAN_CD
+        cd_loss = cd_loss_func(predict_points, view_points, each_batch=True) * L_VIEW_CD if IS_VIEW_CENTER else \
+            cd_loss_func(predict_points, canonical_points, each_batch=True) * L_CAN_CD
 
-        avg_cd_loss += cd_loss.item()
-        class_avg_cd_losses[class_index] += cd_loss.item()
-        class_ns[class_index] += 1
+        avg_cd_loss += cd_loss.mean().item()
+        for b in range(BATCH_SIZE):
+            class_avg_cd_losses[class_indices[b]] += cd_loss[b].item()
+            class_ns[class_indices[b]] += 1
         n += 1
 
     avg_cd_loss /= n
