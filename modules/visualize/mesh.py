@@ -8,7 +8,12 @@ def visualize_mesh_with_gif(image: torch.Tensor, mesh: TriangleMesh, save_name: 
     image = to_pil(image.cpu()).resize((256, 256), Image.BILINEAR)
 
     vertices = mesh.vertices[None]
-    colors = torch.full_like(vertices, fill_value=0.5).cuda()
+
+    vert_min = torch.min(vertices, dim=1, keepdims=True)[0]
+    vert_max = torch.max(vertices, dim=1, keepdims=True)[0]
+    colors = (vertices - vert_min) / (vert_max - vert_min)
+
+    # colors = torch.full_like(vertices, fill_value=0.5).cuda()
     faces = mesh.faces
 
     gif_imgs = []
@@ -27,7 +32,12 @@ def visualize_mesh_with_3pose(image: torch.Tensor, mesh: TriangleMesh, save_name
     image = to_pil(image.cpu()).resize((256, 256), Image.BILINEAR)
 
     vertices = mesh.vertices[None]
-    colors = torch.full_like(vertices, fill_value=0.5).cuda()
+
+    vert_min = torch.min(vertices, dim=1, keepdims=True)[0]
+    vert_max = torch.max(vertices, dim=1, keepdims=True)[0]
+    colors = (vertices - vert_min) / (vert_max - vert_min)
+
+    # colors = torch.full_like(vertices, fill_value=0.5).cuda()
     faces = mesh.faces
 
     imgs = [image]

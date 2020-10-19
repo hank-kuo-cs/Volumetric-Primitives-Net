@@ -5,8 +5,9 @@ from tqdm import tqdm
 from kaolin.rep import TriangleMesh
 from torch.utils.data import DataLoader
 from torch.optim import Adam
-from modules import SDNet, ShapeNetDataset, ChamferDistanceLoss, Visualizer, SilhouetteLoss
-from modules.visualize import TensorboardWriter
+from modules import SDNet, ShapeNetDataset, ChamferDistanceLoss, SilhouetteLoss
+from modules.visualize import TensorboardWriter, Visualizer
+from modules.transform import rotate_points_consistent_with_images
 from config import *
 
 
@@ -102,10 +103,13 @@ def train():
         for data in progress_bar:
             rgbs, silhouettes = data['rgb'].to(DEVICE), data['silhouette'].to(DEVICE)
             canonical_points, view_center_points = data['canonical_points'].to(DEVICE), data['view_center_points'].to(DEVICE)
+            rotate_angles = data['rotate_angle'].float().to(DEVICE)
             dists, elevs, azims = data['dist'].float().to(DEVICE), data['elev'].float().to(DEVICE), data['azim'].float().to(DEVICE)
 
             sphere_meshes = load_sphere_meshes()
             vertices_offset = model(rgbs)
+
+            view_center_points = rotate_points_consistent_with_images(view_center_points, rotate_angles)
 
             # Chamfer Distance Loss
             predict_meshes = deform_meshes(sphere_meshes, vertices_offset)

@@ -94,7 +94,7 @@ def test(epoch: int):
             class_ns[class_indices[b]] += 1
         n += 1
 
-        # Show some Result
+        # Record some Result
         if n % 3 > 0:
             continue
 
@@ -117,11 +117,9 @@ def test(epoch: int):
         if class_ns[i] == 0:
             continue
         class_avg_cd_losses[i] /= class_ns[i]
-        print(class_names[i], 'avg cd loss =%.6f' % class_avg_cd_losses[i])
+        print(class_names[i], 'avg cd loss = %.6f' % class_avg_cd_losses[i])
 
     print('============================\ntotal avg cd loss = %.6f' % avg_cd_loss)
-
-    # Record some result
 
 
 if __name__ == '__main__':
