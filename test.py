@@ -44,7 +44,19 @@ def get_model_path(epoch):
     return os.path.join(checkpoint_path, 'model_epoch%03d.pth' % epoch)
 
 
+def set_save_path():
+    classes_str = ''
+    for c in TEST_CLASSES:
+        classes_str += c + '_'
+
+    dir_path = os.path.join(EXPERIMENT_PATH, 'test', classes_str)
+    os.makedirs(dir_path, exist_ok=True)
+
+    return dir_path
+
+
 def test(epoch: int):
+    dir_path = set_save_path()
     test_dataloader = load_dataset()
     model_path = get_model_path(epoch)
     model = load_model(model_path)
@@ -82,6 +94,22 @@ def test(epoch: int):
             class_ns[class_indices[b]] += 1
         n += 1
 
+        # Show some Result
+        if n % 3 > 0:
+            continue
+
+        batch_vp_meshes = [[] for i in range(BATCH_SIZE)]
+
+        for i in range(vp_num):
+            meshing = Meshing.cuboid_meshing if i < CUBOID_NUM else Meshing.sphere_meshing
+
+            for b in range(BATCH_SIZE):
+                batch_vp_meshes[b].append(meshing(volumes[i], rotates[i], translates[i])[b])
+
+        img = rgbs[0]
+        vp_meshes = batch_vp_meshes[0]
+        Visualizer.render_vp_meshes(img, vp_meshes, os.path.join(dir_path, 'epoch%d-%d.png' % (epoch, n // 3)), SHOW_DIST)
+
     avg_cd_loss /= n
     print('\nEpoch %d\n============================' % epoch)
 
@@ -94,26 +122,6 @@ def test(epoch: int):
     print('============================\ntotal avg cd loss = %.6f' % avg_cd_loss)
 
     # Record some result
-    volumes, rotates, translates = model(rgbs)
-    batch_vp_meshes = [[] for i in range(BATCH_SIZE)]
-
-    for i in range(vp_num):
-        meshing = Meshing.cuboid_meshing if i < CUBOID_NUM else Meshing.sphere_meshing
-
-        for b in range(BATCH_SIZE):
-            batch_vp_meshes[b].append(meshing(volumes[i], rotates[i], translates[i])[b])
-
-    classes_str = ''
-    for c in TEST_CLASSES:
-        classes_str += c + '_'
-
-    dir_path = os.path.join(EXPERIMENT_PATH, 'test', classes_str)
-    os.makedirs(dir_path, exist_ok=True)
-
-    for b in range(BATCH_SIZE):
-        img = rgbs[b]
-        vp_meshes = batch_vp_meshes[b]
-        Visualizer.render_vp_meshes(img, vp_meshes, os.path.join(dir_path, 'epoch%d-%d.png' % (epoch, b)), SHOW_DIST)
 
 
 if __name__ == '__main__':
