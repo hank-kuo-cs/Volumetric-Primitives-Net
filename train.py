@@ -54,7 +54,7 @@ def set_file_path():
 def load_dataset():
     print('Load dataset...')
     train_dataset = ShapeNetDataset('train')
-    train_dataloader = DataLoader(dataset=train_dataset, batch_size=BATCH_SIZE, shuffle=True, num_workers=4)
+    train_dataloader = DataLoader(dataset=train_dataset, batch_size=BATCH_SIZE, shuffle=True, num_workers=16)
     print('Dataset size =', len(train_dataset))
 
     return train_dataloader
