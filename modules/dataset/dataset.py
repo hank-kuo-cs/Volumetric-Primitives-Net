@@ -42,6 +42,9 @@ class ShapeNetDataset(Dataset):
         canonical_points = self._load_sample_points(shapenet_data.canonical_obj_path)
         view_center_points = self._load_sample_points(shapenet_data.view_center_obj_path)
 
+        if IS_DIST_INVARIANT:
+            view_center_points = view_center_points * dist
+
         return {
             'rgb': rgb,
             'silhouette': silhouette,

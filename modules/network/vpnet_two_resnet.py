@@ -37,9 +37,9 @@ class VPNetTwoRes(nn.Module):
 
         volumes, rotates, translates = self.restrict_range(volumes, rotates, translates)
 
-        volumes = volumes.split(3, dim=1)
-        rotates = rotates.split(4, dim=1)
-        translates = translates.split(3, dim=1)
+        volumes = list(volumes.split(3, dim=1))
+        rotates = list(rotates.split(4, dim=1))
+        translates = list(translates.split(3, dim=1))
 
         volumes = self.restrict_volumes(volumes)
 
@@ -71,7 +71,7 @@ class VPNetTwoRes(nn.Module):
     def restrict_range(volumes, rotates, translates):
         if IS_SIGMOID:
             volumes = sigmoid(volumes) + 0.1
-            rotates = tanh(rotates)
+            rotates = sigmoid(rotates)
             translates = tanh(translates)
         else:
             volumes = torch.clamp(volumes,  min=VP_CLAMP_MIN + 1e-8, max=VP_CLAMP_MAX)

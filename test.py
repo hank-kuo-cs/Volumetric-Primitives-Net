@@ -26,7 +26,7 @@ def set_seed(manual_seed=MANUAL_SEED):
 def load_dataset():
     print('Load dataset...')
     test_dataset = ShapeNetDataset('test')
-    test_dataloader = DataLoader(dataset=test_dataset, batch_size=BATCH_SIZE, shuffle=False, num_workers=4)
+    test_dataloader = DataLoader(dataset=test_dataset, batch_size=BATCH_SIZE, shuffle=False, num_workers=16)
     print('Dataset size =', len(test_dataset))
 
     return test_dataloader

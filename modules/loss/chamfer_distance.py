@@ -7,7 +7,7 @@ class ChamferDistanceLoss(nn.Module):
     def __init__(self):
         super().__init__()
 
-    def forward(self, points1: torch.Tensor, points2: torch.Tensor, each_batch=False) -> torch.Tensor:
+    def forward(self, points1: torch.Tensor, points2: torch.Tensor, each_batch=False, w1=CD_W1, w2=CD_W2) -> torch.Tensor:
         self.check_parameters(points1)
         self.check_parameters(points2)
 
@@ -22,7 +22,7 @@ class ChamferDistanceLoss(nn.Module):
         loss1 = dist_min1.mean(1)
         loss2 = dist_min2.mean(1)
 
-        loss = CD_W1 * loss1 + CD_W2 * loss2
+        loss = w1 * loss1 + w2 * loss2
 
         return loss if each_batch else loss.mean()
 

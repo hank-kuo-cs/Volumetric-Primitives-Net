@@ -10,7 +10,7 @@ from modules.network import VPNetOneRes, VPNetTwoRes
 from modules.dataset import ShapeNetDataset
 from modules.meshing import Meshing
 from modules.sampling import Sampling
-from modules.loss import ChamferDistanceLoss, SilhouetteLoss
+from modules.loss import ChamferDistanceLoss, SilhouetteLoss, VPDiverseLoss
 from modules.visualize import Visualizer, TensorboardWriter
 from modules.transform import view_to_obj_points, rotate_points_consistent_with_images
 from config import *
@@ -161,7 +161,7 @@ def calculate_points_loss(predict_points, canonical_points, view_center_points, 
 
 
 def calculate_silhouette_loss(predict_meshes, silhouettes, dists, elevs, azims):
-    if L_SIL == 0:
+    if not L_SIL:
         return torch.tensor(0.0).to(DEVICE)
 
     silhouette_loss_func = SilhouetteLoss()
@@ -173,13 +173,24 @@ def calculate_silhouette_loss(predict_meshes, silhouettes, dists, elevs, azims):
     return silhouette_loss_func(predict_meshes, silhouettes, dists, elevs, azims) * L_SIL
 
 
-def show_loss_one_tensorboard(epoch, avg_losses):
+def calculate_vp_div_loss(translates, gt_points):
+    if not L_VP_DIV:
+        return torch.tensor(0.0).to(DEVICE)
+
+    vp_div_loss_func = VPDiverseLoss()
+
+    return vp_div_loss_func(translates, gt_points) * L_VP_DIV
+
+
+def show_loss_on_tensorboard(epoch, avg_losses):
     if L_VIEW_CD:
         tensorboard_writer.add_scalar('train/view_cd_loss', epoch, avg_losses['view_cd'])
     if L_CAN_CD:
         tensorboard_writer.add_scalar('train/obj_cd_loss', epoch, avg_losses['obj_cd'])
     if L_SIL:
         tensorboard_writer.add_scalar('train/silhouette_loss', epoch, avg_losses['sil'])
+    if L_VP_DIV:
+        tensorboard_writer.add_scalar('train/vp_diverse_loss', epoch, avg_losses['vp_div'])
 
 
 def train(args):
@@ -192,7 +203,7 @@ def train(args):
     # Training Process
     for epoch_now in range(EPOCH_NUM):
         model.train()
-        avg_losses = {'view_cd': 0.0, 'obj_cd': 0.0, 'sil': 0.0}
+        avg_losses = {'view_cd': 0.0, 'obj_cd': 0.0, 'sil': 0.0, 'vp_div': 0.0}
         n = 0
 
         progress_bar = tqdm(train_dataloader)
@@ -219,7 +230,10 @@ def train(args):
 
             sil_loss = calculate_silhouette_loss(predict_meshes, silhouettes, dists, elevs, azims)
 
-            total_loss = view_cd_loss + obj_cd_loss + sil_loss
+            # VP Diverse Loss
+            vp_div_loss = calculate_vp_div_loss(translates, view_center_points if IS_VIEW_CENTER else canonical_points)
+
+            total_loss = view_cd_loss + obj_cd_loss + sil_loss + vp_div_loss
 
             optimizer.zero_grad()
             total_loss.backward()
@@ -229,16 +243,22 @@ def train(args):
             avg_losses['view_cd'] += view_cd_loss.item()
             avg_losses['obj_cd'] += obj_cd_loss.item()
             avg_losses['sil'] += sil_loss.item()
-            progress_bar.set_description('View CD Loss = %.6f, Obj CD Loss = %.6f, Sil Loss = %.6f'
-                                         % (view_cd_loss.item(), obj_cd_loss.item(), sil_loss.item()))
+            avg_losses['vp_div'] += vp_div_loss.item()
+
+            progress_bar.set_description('View CD Loss = %.6f, Obj CD Loss = %.6f, Sil Loss = %.6f, VP Div Loss = %.6f'
+                                         % (view_cd_loss.item(),
+                                            obj_cd_loss.item(),
+                                            sil_loss.item(),
+                                            vp_div_loss.item()))
 
         avg_losses['view_cd'] /= n
         avg_losses['obj_cd'] /= n
         avg_losses['sil'] /= n
+        avg_losses['vp_div'] /= n
 
-        print('Epoch %d. View CD Loss = %.6f. Obj CD Loss = %.6f, Sil Loss = %.6f\n'
-              % (epoch_now + 1, avg_losses['view_cd'], avg_losses['obj_cd'], avg_losses['sil']))
-        show_loss_one_tensorboard(epoch_now + 1, avg_losses)
+        print('Epoch %d. View CD Loss = %.6f. Obj CD Loss = %.6f, Sil Loss = %.6f, VP Div Loss = %.6f\n'
+              % (epoch_now + 1, avg_losses['view_cd'], avg_losses['obj_cd'], avg_losses['sil'], avg_losses['vp_div']))
+        show_loss_on_tensorboard(epoch_now + 1, avg_losses)
 
         # Record some result
         if (epoch_now + 1) % 5 == 0:
