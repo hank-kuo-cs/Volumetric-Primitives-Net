@@ -12,7 +12,8 @@ from modules.meshing import Meshing
 from modules.sampling import Sampling
 from modules.loss import ChamferDistanceLoss, SilhouetteLoss, VPDiverseLoss
 from modules.visualize import Visualizer, TensorboardWriter
-from modules.transform import view_to_obj_points, rotate_points_consistent_with_images
+from modules.transform import view_to_obj_points
+from modules.augmentation import rotate_points_forward_x_axis, cut_mix_data
 from config import *
 
 
@@ -214,7 +215,10 @@ def train(args):
             canonical_points, view_center_points = data['canonical_points'].to(DEVICE), data['view_center_points'].to(DEVICE)
             dists, elevs, azims = data['dist'].float().to(DEVICE), data['elev'].float().to(DEVICE), data['azim'].float().to(DEVICE)
 
-            view_center_points = rotate_points_consistent_with_images(view_center_points, rotate_angles)
+            if AUGMENT_3D['rotate']:
+                view_center_points = rotate_points_forward_x_axis(view_center_points, rotate_angles)
+            if AUGMENT_3D['cutmix']:
+                rgbs, silhouettes, view_center_points = cut_mix_data(rgbs, silhouettes, view_center_points)
 
             volumes, rotates, translates = model(rgbs)
 

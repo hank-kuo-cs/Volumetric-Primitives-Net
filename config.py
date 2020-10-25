@@ -47,7 +47,7 @@ IS_NORMALIZE = False
 IS_DIST_INVARIANT = False
 LITTLE_NUM = {'train': 100, 'test': 20}
 IMG_SIZE = 128
-AUGMENT_3D = {'rotate': False, 'cutmix': False}
+AUGMENT_3D = {'rotate': False, 'cutmix': False, 'scale': False}
 
 # airplane, rifle, display, table, telephone, car, chair, bench, lamp, cabinet, loudspeaker, sofa, watercraft
 TRAIN_CLASSES = ['airplane', 'car', 'chair']
