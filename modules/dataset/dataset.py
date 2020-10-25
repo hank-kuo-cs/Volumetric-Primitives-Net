@@ -12,9 +12,9 @@ from .classes import Classes
 from ..transform.rotate import rotate_points
 from config import *
 
-
 img_transform = transforms.Compose([
     transforms.Resize(IMG_SIZE),
+    transforms.ColorJitter(brightness=0.4, saturation=0.4, contrast=0.4),
     transforms.ToTensor()
 ])
 
@@ -43,7 +43,7 @@ class ShapeNetDataset(Dataset):
         view_center_points = self._load_sample_points(shapenet_data.view_center_obj_path)
 
         if IS_DIST_INVARIANT:
-            view_center_points = view_center_points * dist
+            view_center_points *= dist
 
         return {
             'rgb': rgb,
