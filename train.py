@@ -12,8 +12,8 @@ from modules.meshing import Meshing
 from modules.sampling import Sampling
 from modules.loss import ChamferDistanceLoss, SilhouetteLoss, VPDiverseLoss
 from modules.visualize import Visualizer, TensorboardWriter
-from modules.transform import view_to_obj_points
-from modules.augmentation import rotate_points_forward_x_axis, cut_mix_data
+from modules.transform import view_to_obj_points, rotate_points_forward_x_axis
+from modules.augmentation import cut_mix_data
 from config import *
 
 
