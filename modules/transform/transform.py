@@ -1,6 +1,7 @@
 import torch
 from .rotate import rotate_points
 from .translate import translate_points
+from ..augmentation.rotate import rotate_points_forward_x_axis
 
 
 def transform_points(points: torch.Tensor, q: torch.Tensor, t: torch.Tensor):
@@ -22,7 +23,7 @@ def view_to_obj_points(points, dists, elevs, azims, angles):
     assert points.ndimension() == 3  # (B, N, 3)
     assert dists.ndimension() == elevs.ndimension() == azims.ndimension() == 1  # (B)
     dists, elevs, azims = dists.view(-1, 1), elevs.view(-1, 1) / 360, azims.view(-1, 1) / 360
-    points = rotate_points_consistent_with_images(points, -angles)
+    points = rotate_points_forward_x_axis(points, -angles)
 
     B = points.size(0)
     y = torch.tensor([[0, 1, 0]], device=points.device)
