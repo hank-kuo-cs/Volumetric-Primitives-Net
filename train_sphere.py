@@ -7,7 +7,8 @@ from torch.utils.data import DataLoader
 from torch.optim import Adam
 from modules import SDNet, ShapeNetDataset, ChamferDistanceLoss, SilhouetteLoss
 from modules.visualize import TensorboardWriter, Visualizer
-from modules.transform import rotate_points_consistent_with_images
+from modules.transform import rotate_points_forward_x_axis
+from modules.augmentation import cut_mix_data
 from config import *
 
 
@@ -109,7 +110,10 @@ def train():
             sphere_meshes = load_sphere_meshes()
             vertices_offset = model(rgbs)
 
-            view_center_points = rotate_points_consistent_with_images(view_center_points, rotate_angles)
+            if AUGMENT_3D['rotate']:
+                view_center_points = rotate_points_forward_x_axis(view_center_points, rotate_angles)
+            if AUGMENT_3D['cutmix']:
+                rgbs, silhouettes, view_center_points = cut_mix_data(rgbs, silhouettes, view_center_points)
 
             # Chamfer Distance Loss
             predict_meshes = deform_meshes(sphere_meshes, vertices_offset)
