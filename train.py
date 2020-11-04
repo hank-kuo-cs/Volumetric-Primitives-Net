@@ -13,7 +13,7 @@ from modules.sampling import Sampling
 from modules.loss import ChamferDistanceLoss, SilhouetteLoss, VPDiverseLoss
 from modules.visualize import Visualizer, TensorboardWriter
 from modules.transform import view_to_obj_points, rotate_points_forward_x_axis
-from modules.augmentation import cut_mix_data
+from modules.augmentation import cut_mix_data, point_mixup_data
 from config import *
 
 
@@ -147,7 +147,7 @@ def compose_vp_meshes(batch_vp_meshes):
     return batch_meshes
 
 
-def calculate_points_loss(predict_points, canonical_points, view_center_points, dists, elevs, azims, angles):
+def calculate_cd_loss(predict_points, canonical_points, view_center_points, dists, elevs, azims, angles):
     cd_loss_func = ChamferDistanceLoss()
 
     if not IS_VIEW_CENTER:
@@ -219,14 +219,16 @@ def train(args):
                 view_center_points = rotate_points_forward_x_axis(view_center_points, rotate_angles)
             if AUGMENT_3D['cutmix']:
                 rgbs, silhouettes, view_center_points = cut_mix_data(rgbs, silhouettes, view_center_points)
+            if AUGMENT_3D['point_mixup']:
+                rgbs, silhouettes, view_center_points = point_mixup_data(view_center_points)
 
             volumes, rotates, translates = model(rgbs)
 
             # Chamfer Distance Loss
             predict_points = sample_predict_points(volumes, rotates, translates)
 
-            view_cd_loss, obj_cd_loss = calculate_points_loss(predict_points, canonical_points, view_center_points,
-                                                              dists, elevs, azims, rotate_angles)
+            view_cd_loss, obj_cd_loss = calculate_cd_loss(predict_points, canonical_points, view_center_points,
+                                                          dists, elevs, azims, rotate_angles)
 
             # Silhouette Loss
             batch_vp_meshes = get_vp_meshes(volumes, rotates, translates)

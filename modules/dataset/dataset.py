@@ -159,7 +159,8 @@ class ShapeNetDataset(Dataset):
     @staticmethod
     def _load_sample_points(obj_path: str) -> torch.Tensor:
         mesh = TriangleMesh.from_obj(obj_path)
-        return mesh.sample(SAMPLE_NUM * vp_num)[0]
+        # return mesh.sample(SAMPLE_NUM * vp_num)[0]
+        return mesh.sample(2048)[0]
 
     @staticmethod
     def transform_to_view_center(vertices: torch.Tensor, dist: float, elev: float, azim: float) -> torch.Tensor:

@@ -6,7 +6,7 @@ def cut_mix_data(rgbs: torch.Tensor, silhouettes: torch.Tensor, view_center_poin
     check_parameters(rgbs, silhouettes, view_center_points)
     B, C, H, W = rgbs.size()
 
-    w_min, w_max = 0.1, 0.9
+    w_min, w_max = 0.3, 0.7
     img_cut_ratio = w_min + torch.rand(1).item() * (w_max - w_min)
     img_cut_index = int(W * img_cut_ratio)
     point_cut_ratio = (0.5 - img_cut_ratio) * 2 * 0.30769

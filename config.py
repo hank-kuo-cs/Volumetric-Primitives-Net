@@ -5,7 +5,7 @@ DEVICE_NUM = '6'
 # Hyper parameter
 LR = 1e-4
 W_DECAY = 1e-6
-SAMPLE_NUM = 200
+SAMPLE_NUM = 128
 BATCH_SIZE = 8
 EPOCH_NUM = 50
 CD_W1 = 1.0
@@ -47,7 +47,7 @@ IS_NORMALIZE = False
 IS_DIST_INVARIANT = False
 LITTLE_NUM = {'train': 100, 'test': 20}
 IMG_SIZE = 128
-AUGMENT_3D = {'rotate': False, 'cutmix': False, 'scale': False}
+AUGMENT_3D = {'rotate': False, 'cutmix': False, 'scale': False, 'point_mixup': False}
 
 # airplane, rifle, display, table, telephone, car, chair, bench, lamp, cabinet, loudspeaker, sofa, watercraft
 TRAIN_CLASSES = ['airplane', 'car', 'chair']
