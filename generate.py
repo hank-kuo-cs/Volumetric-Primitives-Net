@@ -28,21 +28,22 @@ if __name__ == '__main__':
     to_pil = transforms.ToPILImage()
     n = 1
 
-    for data in progress_bar:
-        rotate_angles = data['rotate_angle'].float().to(DEVICE)
-        view_center_points = data['view_center_points'].to(DEVICE)
+    for epoch in range(1):
+        for data in progress_bar:
+            rotate_angles = data['rotate_angle'].float().to(DEVICE)
+            view_center_points = data['view_center_points'].to(DEVICE)
 
-        # view_center_points = rotate_points_forward_x_axis(view_center_points, rotate_angles)
-        rgbs, silhouettes, meshes = generate_point_mixup_data(view_center_points)
+            # view_center_points = rotate_points_forward_x_axis(view_center_points, rotate_angles)
+            rgbs, silhouettes, meshes = generate_point_mixup_data(view_center_points)
 
-        for i in range(rgbs.size(0)):
-            rgb = to_pil(rgbs[i].cpu())
-            silhouette = to_pil(silhouettes[i].cpu())
+            for i in range(rgbs.size(0)):
+                rgb = to_pil(rgbs[i].cpu())
+                silhouette = to_pil(silhouettes[i].cpu())
 
-            rgb.save(os.path.join(dataset_path, 'rgb_%d.png' % n))
-            silhouette.save(os.path.join(dataset_path, 'silhouette_%d.png' % n))
+                rgb.save(os.path.join(dataset_path, 'rgb_%d.png' % n))
+                silhouette.save(os.path.join(dataset_path, 'silhouette_%d.png' % n))
 
-            mesh = meshes[i]
-            mesh.save_mesh(os.path.join(dataset_path, 'mesh_%d.obj' % n))
+                mesh = meshes[i]
+                mesh.save_mesh(os.path.join(dataset_path, 'mesh_%d.obj' % n))
 
-            n += 1
+                n += 1
