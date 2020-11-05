@@ -1,6 +1,6 @@
 # CUDA
 DEVICE = 'cuda'
-DEVICE_NUM = '6'
+DEVICE_NUM = ''
 
 # Hyper parameter
 LR = 1e-4
@@ -11,9 +11,10 @@ EPOCH_NUM = 50
 CD_W1 = 1.0
 CD_W2 = 1.0
 L_VIEW_CD = 1.0
-L_CAN_CD = 1.0
+L_CAN_CD = 0.0
 L_SIL = 0.0
-L_VP_DIV = 0.0
+L_VP_DIV = 0.1
+L_EMD = 0.0
 
 # Network
 MANUAL_SEED = 1234

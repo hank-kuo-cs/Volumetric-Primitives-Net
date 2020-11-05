@@ -6,7 +6,7 @@ from kaolin.rep import TriangleMesh
 
 def ball_pivot_surface_reconstruction(points: torch.Tensor) -> TriangleMesh:
     pcd = o3d.geometry.PointCloud()
-    pcd.points = o3d.utility.Vector3dVector(points)
+    pcd.points = o3d.utility.Vector3dVector(points.cpu())
     pcd.estimate_normals()
 
     distances = pcd.compute_nearest_neighbor_distance()

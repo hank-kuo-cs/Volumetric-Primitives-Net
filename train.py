@@ -10,7 +10,7 @@ from modules.network import VPNetOneRes, VPNetTwoRes
 from modules.dataset import ShapeNetDataset
 from modules.meshing import Meshing
 from modules.sampling import Sampling
-from modules.loss import ChamferDistanceLoss, SilhouetteLoss, VPDiverseLoss
+from modules.loss import ChamferDistanceLoss, SilhouetteLoss, VPDiverseLoss, EarthMoverDistanceLoss
 from modules.visualize import Visualizer, TensorboardWriter
 from modules.transform import view_to_obj_points, rotate_points_forward_x_axis
 from modules.augmentation import cut_mix_data, point_mixup_data
@@ -183,6 +183,16 @@ def calculate_vp_div_loss(translates, gt_points):
     return vp_div_loss_func(translates, gt_points) * L_VP_DIV
 
 
+def calculate_emd_loss(predict_points, gt_points):
+    if not L_EMD:
+        return torch.tensor(0.0).to(DEVICE)
+
+    emd_loss_func = EarthMoverDistanceLoss()
+    dist, assignment = emd_loss_func(predict_points, gt_points, 0.005, 50)
+
+    return torch.sqrt(dist).mean()
+
+
 def show_loss_on_tensorboard(epoch, avg_losses):
     if L_VIEW_CD:
         tensorboard_writer.add_scalar('train/view_cd_loss', epoch, avg_losses['view_cd'])
@@ -192,6 +202,8 @@ def show_loss_on_tensorboard(epoch, avg_losses):
         tensorboard_writer.add_scalar('train/silhouette_loss', epoch, avg_losses['sil'])
     if L_VP_DIV:
         tensorboard_writer.add_scalar('train/vp_diverse_loss', epoch, avg_losses['vp_div'])
+    if L_EMD:
+        tensorboard_writer.add_scalar('train/emd_loss', epoch, avg_losses['emd'])
 
 
 def train(args):
@@ -204,7 +216,7 @@ def train(args):
     # Training Process
     for epoch_now in range(EPOCH_NUM):
         model.train()
-        avg_losses = {'view_cd': 0.0, 'obj_cd': 0.0, 'sil': 0.0, 'vp_div': 0.0}
+        avg_losses = {'view_cd': 0.0, 'obj_cd': 0.0, 'sil': 0.0, 'vp_div': 0.0, 'emd': 0.0}
         n = 0
 
         progress_bar = tqdm(train_dataloader)
@@ -239,7 +251,10 @@ def train(args):
             # VP Diverse Loss
             vp_div_loss = calculate_vp_div_loss(translates, view_center_points if IS_VIEW_CENTER else canonical_points)
 
-            total_loss = view_cd_loss + obj_cd_loss + sil_loss + vp_div_loss
+            # EMD Loss
+            emd_loss = calculate_emd_loss(predict_points, view_center_points)
+
+            total_loss = view_cd_loss + obj_cd_loss + sil_loss + vp_div_loss + emd_loss
 
             optimizer.zero_grad()
             total_loss.backward()
@@ -250,20 +265,20 @@ def train(args):
             avg_losses['obj_cd'] += obj_cd_loss.item()
             avg_losses['sil'] += sil_loss.item()
             avg_losses['vp_div'] += vp_div_loss.item()
+            avg_losses['emd'] += emd_loss.item()
 
-            progress_bar.set_description('View CD Loss = %.6f, Obj CD Loss = %.6f, Sil Loss = %.6f, VP Div Loss = %.6f'
-                                         % (view_cd_loss.item(),
-                                            obj_cd_loss.item(),
-                                            sil_loss.item(),
-                                            vp_div_loss.item()))
+            progress_bar.set_description(
+                'View CD Loss = %.6f, Obj CD Loss = %.6f, Sil Loss = %.6f, VP Div Loss = %.6f, EMD Loss = %.6f'
+                % (view_cd_loss.item(), obj_cd_loss.item(), sil_loss.item(), vp_div_loss.item(), emd_loss.item()))
 
         avg_losses['view_cd'] /= n
         avg_losses['obj_cd'] /= n
         avg_losses['sil'] /= n
         avg_losses['vp_div'] /= n
+        avg_losses['emd'] /= n
 
-        print('Epoch %d. View CD Loss = %.6f. Obj CD Loss = %.6f, Sil Loss = %.6f, VP Div Loss = %.6f\n'
-              % (epoch_now + 1, avg_losses['view_cd'], avg_losses['obj_cd'], avg_losses['sil'], avg_losses['vp_div']))
+        print('[Epoch %d AVG Loss] View CD Loss = %.6f. Obj CD Loss = %.6f, Sil Loss = %.6f, VP Div Loss = %.6f, EMD Loss = %.6f\n'
+              % (epoch_now + 1, avg_losses['view_cd'], avg_losses['obj_cd'], avg_losses['sil'], avg_losses['vp_div'], avg_losses['emd']))
         show_loss_on_tensorboard(epoch_now + 1, avg_losses)
 
         # Record some result

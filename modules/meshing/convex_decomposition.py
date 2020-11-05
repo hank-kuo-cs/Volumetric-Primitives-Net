@@ -22,7 +22,7 @@ def get_trimesh_from_kaolinmesh(kao_mesh: TriangleMesh):
 
 def get_kaolinmesh_from_trimesh(tri_mesh: trimesh.Trimesh):
     vertices = torch.tensor(tri_mesh.vertices, dtype=torch.float)
-    faces = torch.tensor(tri_mesh.triangles, dtype=torch.long)
+    faces = torch.tensor(tri_mesh.faces, dtype=torch.long)
     return TriangleMesh.from_tensors(vertices, faces)
 
 
