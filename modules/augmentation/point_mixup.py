@@ -16,8 +16,9 @@ def point_mixup_data(view_center_points: torch.Tensor) -> (torch.Tensor, torch.T
     recon_meshes, uvs, textures = points_to_meshes_and_colors(mixed_points)
 
     rgbs, silhouettes = meshes_to_imgs(recon_meshes, uvs, textures)
+    new_points = torch.cat([mesh.sample(2048)[0][None] for mesh in recon_meshes], 0).to(DEVICE)
 
-    return rgbs, silhouettes, mixed_points
+    return rgbs, silhouettes, new_points
 
 
 def mixup_points(points: torch.Tensor) -> torch.Tensor:
@@ -63,8 +64,8 @@ def meshes_to_imgs(meshes: list, uvs: list, textures: list) -> (torch.Tensor, to
         rgbs.append(rgb.permute(0, 3, 1, 2))
         silhouettes.append(silhouette.permute(0, 3, 1, 2))
 
-    rgbs = torch.cat(rgbs)
-    silhouettes = torch.cat(silhouettes)
+    rgbs = torch.cat(rgbs).to(DEVICE)
+    silhouettes = torch.cat(silhouettes).to(DEVICE)
 
     return rgbs, silhouettes
 

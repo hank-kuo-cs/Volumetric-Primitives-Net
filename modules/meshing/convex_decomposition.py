@@ -1,12 +1,12 @@
 import torch
 import trimesh
 from kaolin.rep import TriangleMesh
-from config import DEVICE
+from config import DEVICE, DECOMPOSE_CONVEX_NUM
 
 
 def approximate_convex_decomposition(mesh: TriangleMesh) -> (TriangleMesh, torch.Tensor, torch.Tensor):
     mesh = get_trimesh_from_kaolinmesh(mesh)
-    convex_list = mesh.convex_decomposition(8, beta=0.8, alpha=0.8, concavity=0.01)
+    convex_list = mesh.convex_decomposition(DECOMPOSE_CONVEX_NUM, beta=0.8, alpha=0.8, concavity=0.01)
     convex_list = [get_kaolinmesh_from_trimesh(convex) for convex in convex_list]
 
     mesh, uv, texture = merge_meshes(convex_list)

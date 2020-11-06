@@ -23,7 +23,7 @@ vp_num = CUBOID_NUM + SPHERE_NUM + CONE_NUM
 
 class ShapeNetDataset(Dataset):
     def __init__(self, dataset_type: str):
-        assert dataset_type == 'train' or dataset_type == 'test'
+        assert dataset_type == 'train' or dataset_type == 'test_seen' or dataset_type == 'test_unseen'
         self.dataset_type = dataset_type
         self.shapenet_datas = []
         self.split_data = {}
@@ -59,7 +59,9 @@ class ShapeNetDataset(Dataset):
 
     def _load_data(self):
         self._load_split_data()
-        CLASSES = TRAIN_CLASSES if self.dataset_type == 'train' else TEST_CLASSES
+        CLASSES = {'train': TRAIN_CLASSES,
+                   'test_seen': TEST_SEEN_CLASSES,
+                   'test_unseen': TEST_UNSEEN_CLASSES}[self.dataset_type]
 
         dataset_indices = self.split_data['train'] if self.dataset_type == 'train' else self.split_data['test']
 

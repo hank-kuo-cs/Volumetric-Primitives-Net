@@ -2,6 +2,7 @@ import os
 import sys
 import random
 import torch
+import argparse
 from tqdm import tqdm
 from torch.utils.data import DataLoader
 from modules import VPNetOneRes, VPNetTwoRes, Sampling, ChamferDistanceLoss, Meshing, Visualizer
@@ -23,9 +24,17 @@ def set_seed(manual_seed=MANUAL_SEED):
     torch.backends.cudnn.deterministic = True
 
 
-def load_dataset():
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-un', '--is_unseen', action='store_true', help='Test on unseen classes')
+    parser.add_argument('-e', '--epoch', type=int, default=50, help='Use which model train on this number of epochs')
+
+    return parser.parse_args()
+
+
+def load_dataset(is_unseen: bool):
     print('Load dataset...')
-    test_dataset = ShapeNetDataset('test')
+    test_dataset = ShapeNetDataset('test_unseen' if is_unseen else 'test_seen')
     test_dataloader = DataLoader(dataset=test_dataset, batch_size=BATCH_SIZE, shuffle=False, num_workers=16)
     print('Dataset size =', len(test_dataset))
 
@@ -55,9 +64,11 @@ def set_save_path():
     return dir_path
 
 
-def test(epoch: int):
+def test(args):
+    epoch = args.epoch
+    is_unseen = args.is_unseen
     dir_path = set_save_path()
-    test_dataloader = load_dataset()
+    test_dataloader = load_dataset(is_unseen)
     model_path = get_model_path(epoch)
     model = load_model(model_path)
 
@@ -123,7 +134,7 @@ def test(epoch: int):
 
 
 if __name__ == '__main__':
-    epoch = int(sys.argv[1])
+    args = parse_args()
     set_seed()
     os.environ['CUDA_VISIBLE_DEVICES'] = DEVICE_NUM
-    test(epoch)
+    test(args)
