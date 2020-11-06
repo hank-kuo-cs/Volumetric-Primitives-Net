@@ -13,9 +13,9 @@ def point_mixup_data(view_center_points: torch.Tensor) -> (torch.Tensor, torch.T
     check_parameters(view_center_points)
 
     mixed_points = mixup_points(view_center_points)
-    recon_meshes, colors = points_to_meshes_and_colors(mixed_points)
+    recon_meshes, uvs, textures = points_to_meshes_and_colors(mixed_points)
 
-    rgbs, silhouettes = meshes_to_imgs(recon_meshes, colors)
+    rgbs, silhouettes = meshes_to_imgs(recon_meshes, uvs, textures)
 
     return rgbs, silhouettes, mixed_points
 
@@ -43,23 +43,22 @@ def points_to_meshes_and_colors(points: torch.Tensor) -> (list, list):
     check_parameters(points)
     broken_meshes = [ball_pivot_surface_reconstruction(points[b]) for b in range(points.size(0))]
 
-    meshes, colors = [], []
+    meshes, uvs, textures = [], [], []
 
     for broken_mesh in broken_meshes:
-        mesh, color = approximate_convex_decomposition(broken_mesh)
+        mesh, uv, texture = approximate_convex_decomposition(broken_mesh)
         meshes.append(mesh)
-        colors.append(color)
+        uvs.append(uv)
+        textures.append(texture)
 
-    return meshes, colors
+    return meshes, uvs, textures
 
 
-def meshes_to_imgs(meshes: list, colors: list) -> (torch.Tensor, torch.Tensor):
+def meshes_to_imgs(meshes: list, uvs: list, textures: list) -> (torch.Tensor, torch.Tensor):
     rgbs, silhouettes = [], []
 
     for i in range(len(meshes)):
-        p = torch.rand(1).item()
-        rgb, silhouette, _ = VertexRenderer.render(meshes[i], 1, 0, 0, colors[i][None]) if p >= 0.5 \
-            else PhongRenderer.render(meshes[i], 1, 0, 0)
+        rgb, silhouette, _ = PhongRenderer.render(meshes[i], 1, 0, 0, uvs[i], textures[i])
 
         rgbs.append(rgb.permute(0, 3, 1, 2))
         silhouettes.append(silhouette.permute(0, 3, 1, 2))
@@ -79,8 +78,8 @@ def generate_point_mixup_data(view_center_points: torch.Tensor) -> (torch.Tensor
     check_parameters(view_center_points)
 
     mixed_points = mixup_points(view_center_points)
-    recon_meshes, colors = points_to_meshes_and_colors(mixed_points)
+    recon_meshes, uvs, textures = points_to_meshes_and_colors(mixed_points)
 
-    rgbs, silhouettes = meshes_to_imgs(recon_meshes, colors)
+    rgbs, silhouettes = meshes_to_imgs(recon_meshes, uvs, textures)
 
     return rgbs, silhouettes, recon_meshes

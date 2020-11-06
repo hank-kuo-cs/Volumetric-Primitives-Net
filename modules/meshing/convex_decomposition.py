@@ -4,13 +4,13 @@ from kaolin.rep import TriangleMesh
 from config import DEVICE
 
 
-def approximate_convex_decomposition(mesh: TriangleMesh) -> TriangleMesh:
+def approximate_convex_decomposition(mesh: TriangleMesh) -> (TriangleMesh, torch.Tensor, torch.Tensor):
     mesh = get_trimesh_from_kaolinmesh(mesh)
     convex_list = mesh.convex_decomposition(8, beta=0.8, alpha=0.8, concavity=0.01)
     convex_list = [get_kaolinmesh_from_trimesh(convex) for convex in convex_list]
 
-    mesh, colors = merge_meshes(convex_list)
-    return mesh, colors
+    mesh, uv, texture = merge_meshes(convex_list)
+    return mesh, uv, texture
 
 
 def get_trimesh_from_kaolinmesh(kao_mesh: TriangleMesh):
@@ -28,25 +28,28 @@ def get_kaolinmesh_from_trimesh(tri_mesh: trimesh.Trimesh):
 
 def merge_meshes(meshes: list) -> (TriangleMesh, torch.Tensor):
     vertex_num = 0
-    vertices, faces, colors = [], [], []
+    vertices, faces, texture, uv = [], [], [], []
 
     for i, mesh in enumerate(meshes):
         vertices.append(mesh.vertices)
         faces.append(mesh.faces + vertex_num)
-        colors.append(get_random_colors(mesh.vertices.size(0)))
+        uv.append(torch.full((mesh.vertices.size(0), 2), i/len(meshes) + 0.01))
+        texture.append(get_random_colors())
 
         vertex_num += mesh.vertices.size(0)
 
     vertices = torch.cat(vertices)
     faces = torch.cat(faces)
-    colors = torch.cat(colors).to(DEVICE)
+
+    uv = torch.cat(uv)[None].to(DEVICE)
+    texture = torch.cat(texture, 2)[None].to(DEVICE)
 
     merged_mesh = TriangleMesh.from_tensors(vertices, faces)
     merged_mesh.to(DEVICE)
 
-    return merged_mesh, colors
+    return merged_mesh, uv, texture
 
 
-def get_random_colors(n: int):
+def get_random_colors():
     c = torch.rand(3)
-    return torch.cat([torch.full((n, 1), c[i].item()) for i in range(3)], 1)
+    return torch.cat([torch.full((1, 1, 1), c[i].item()) for i in range(3)], 0)
