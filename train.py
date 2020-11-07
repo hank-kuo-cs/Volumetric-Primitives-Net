@@ -7,7 +7,7 @@ from torch.utils.data import DataLoader
 from torch.optim import Adam
 
 from modules.network import VPNetOneRes, VPNetTwoRes
-from modules.dataset import ShapeNetDataset
+from modules.dataset import ShapeNetDataset, PointMixUpDatset
 from modules.meshing import Meshing
 from modules.sampling import Sampling
 from modules.loss import ChamferDistanceLoss, SilhouetteLoss, VPDiverseLoss, EarthMoverDistanceLoss
@@ -33,8 +33,8 @@ def set_seed(manual_seed=MANUAL_SEED):
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('-pre', '--pretrain_model', type=str,
-                        help='Load a pretrained model to continue training')
+    parser.add_argument('-pre', '--pretrain_model', type=str, help='Load a pretrained model to continue training')
+    parser.add_argument('-p_mix', '--point_mixup', action='store_true', help='Use point mixup dataset to train')
 
     return parser.parse_args()
 
@@ -52,9 +52,10 @@ def set_file_path():
     return dir_path, checkpoint_path
 
 
-def load_dataset():
+def load_dataset(point_mixup_dataset_name=''):
     print('Load dataset...')
-    train_dataset = ShapeNetDataset('train')
+    train_dataset = ShapeNetDataset('train') \
+        if not point_mixup_dataset_name else PointMixUpDatset(point_mixup_dataset_name)
     train_dataloader = DataLoader(dataset=train_dataset, batch_size=BATCH_SIZE, shuffle=True, num_workers=16)
     print('Dataset size =', len(train_dataset))
 
@@ -292,8 +293,76 @@ def train(args):
             torch.save(model.state_dict(), os.path.join(checkpoint_path, 'model_epoch%03d.pth' % (epoch_now + 1)))
 
 
+def train_pointmixup(args):
+    train_dataloader = load_dataset('PointMixUp/1')
+
+    dir_path, checkpoint_path = set_file_path()
+
+    model = load_model(args.pretrain_model)
+    optimizer = load_optimizer(model)
+
+    cd_loss_func = ChamferDistanceLoss()
+
+    # Training Process
+    for epoch_now in range(EPOCH_NUM):
+        model.train()
+        avg_losses = {'view_cd': 0.0, 'vp_div': 0.0, 'emd': 0.0}
+        n = 0
+
+        progress_bar = tqdm(train_dataloader)
+
+        for data in progress_bar:
+            rgbs, silhouettes, points = data['rgb'].to(DEVICE), data['silhouette'].to(DEVICE), data['points'].to(DEVICE)
+
+            volumes, rotates, translates = model(rgbs)
+
+            # Chamfer Distance Loss
+            predict_points = sample_predict_points(volumes, rotates, translates)
+
+            cd_loss = cd_loss_func(predict_points, points) * L_VIEW_CD
+            vp_div_loss = cd_loss_func(translates, points) * L_VP_DIV
+            emd_loss = calculate_emd_loss(predict_points, points) * L_EMD
+
+            total_loss = cd_loss + vp_div_loss + emd_loss
+
+            optimizer.zero_grad()
+            total_loss.backward()
+            optimizer.step()
+
+            n += 1
+            avg_losses['view_cd'] += cd_loss.item()
+            avg_losses['vp_div'] += vp_div_loss.item()
+            avg_losses['emd'] += emd_loss.item()
+
+            progress_bar.set_description('CD Loss = %.6f, VP Div Loss = %.6f, EMD Loss = %.6f'
+                                         % (cd_loss.item(), vp_div_loss.item(), emd_loss.item()))
+
+        avg_losses['view_cd'] /= n
+        avg_losses['vp_div'] /= n
+        avg_losses['emd'] /= n
+
+        print('[Epoch %d AVG Loss] CD Loss = %.6f, VP Div Loss = %.6f, EMD Loss = %.6f\n'
+              % (epoch_now + 1, avg_losses['view_cd'], avg_losses['vp_div'], avg_losses['emd']))
+        show_loss_on_tensorboard(epoch_now + 1, avg_losses)
+
+        batch_vp_meshes = get_vp_meshes(volumes, rotates, translates)
+
+        # Record some result
+        if (epoch_now + 1) % 5 == 0:
+            for b in range(BATCH_SIZE):
+                img = rgbs[b]
+                vp_meshes = batch_vp_meshes[b]
+                save_name = os.path.join(dir_path, 'epoch%d-%d.png' % (epoch_now + 1, b))
+                Visualizer.render_vp_meshes(img, vp_meshes, save_name, dist=SHOW_DIST)
+
+            torch.save(model.state_dict(), os.path.join(checkpoint_path, 'model_epoch%03d.pth' % (epoch_now + 1)))
+
+
 if __name__ == '__main__':
     args = parse_args()
     set_seed()
     os.environ['CUDA_VISIBLE_DEVICES'] = DEVICE_NUM
-    train(args)
+    if args.point_mixup:
+        train_pointmixup(args)
+    else:
+        train(args)
