@@ -53,9 +53,10 @@ def get_model_path(epoch):
     return os.path.join(checkpoint_path, 'model_epoch%03d.pth' % epoch)
 
 
-def set_save_path():
+def set_save_path(is_unseen=False):
     classes_str = ''
-    for c in TEST_CLASSES:
+    classes = TEST_UNSEEN_CLASSES if is_unseen else TEST_SEEN_CLASSES
+    for c in classes:
         classes_str += c + '_'
 
     dir_path = os.path.join(EXPERIMENT_PATH, 'test', classes_str)
@@ -67,7 +68,7 @@ def set_save_path():
 def test(args):
     epoch = args.epoch
     is_unseen = args.is_unseen
-    dir_path = set_save_path()
+    dir_path = set_save_path(is_unseen)
     test_dataloader = load_dataset(is_unseen)
     model_path = get_model_path(epoch)
     model = load_model(model_path)
