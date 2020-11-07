@@ -20,7 +20,7 @@ class PointMixUpDatset(Dataset):
         self.dataset_path = os.path.join(DATASET_ROOT, dataset_name)
         self.rgb_paths = sorted(glob(self.dataset_path + '/rgb*.png'))
         self.silhouette_paths = sorted(glob(self.dataset_path + '/silhouette*.png'))
-        self.obj_paths = sorted(glob(self.dataset_path + '/model*.obj'))
+        self.obj_paths = sorted(glob(self.dataset_path + '/mesh*.obj'))
 
     def __len__(self) -> int:
         return len(self.rgb_paths)
