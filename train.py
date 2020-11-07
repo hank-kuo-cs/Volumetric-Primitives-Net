@@ -320,7 +320,7 @@ def train_pointmixup(args):
             predict_points = sample_predict_points(volumes, rotates, translates)
 
             cd_loss = cd_loss_func(predict_points, points) * L_VIEW_CD
-            vp_div_loss = cd_loss_func(translates, points) * L_VP_DIV
+            vp_div_loss = calculate_vp_div_loss(translates, points) * L_VP_DIV
             emd_loss = calculate_emd_loss(predict_points, points) * L_EMD
 
             total_loss = cd_loss + vp_div_loss + emd_loss
