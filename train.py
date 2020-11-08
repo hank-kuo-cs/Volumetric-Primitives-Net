@@ -34,7 +34,7 @@ def set_seed(manual_seed=MANUAL_SEED):
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('-pre', '--pretrain_model', type=str, help='Load a pretrained model to continue training')
-    parser.add_argument('-p_mix', '--point_mixup', action='store_true', help='Use point mixup dataset to train')
+    parser.add_argument('-p_mix', '--point_mixup', type=str, help='Use point mixup dataset to train')
 
     return parser.parse_args()
 
@@ -294,7 +294,7 @@ def train(args):
 
 
 def train_pointmixup(args):
-    train_dataloader = load_dataset('PointMixUp/1')
+    train_dataloader = load_dataset(args.point_mixup)
 
     dir_path, checkpoint_path = set_file_path()
 
@@ -312,7 +312,11 @@ def train_pointmixup(args):
         progress_bar = tqdm(train_dataloader)
 
         for data in progress_bar:
-            rgbs, silhouettes, points = data['rgb'].to(DEVICE), data['silhouette'].to(DEVICE), data['points'].to(DEVICE)
+            rgbs, silhouettes = data['rgb'].to(DEVICE), data['silhouette'].to(DEVICE)
+            points, angles = data['points'].to(DEVICE), data['angle'].to(DEVICE)
+
+            if AUGMENT_3D['rotate']:
+                points = rotate_points_forward_x_axis(points, angles)
 
             volumes, rotates, translates = model(rgbs)
 

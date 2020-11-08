@@ -1,4 +1,5 @@
 import os
+import torch
 from glob import glob
 from PIL import Image
 from torch.utils.data import Dataset
@@ -33,9 +34,25 @@ class PointMixUpDatset(Dataset):
         rgb = img_transform(Image.open(rgb_path))
         silhouette = img_transform(Image.open(silhouette_path))
         points = TriangleMesh.from_obj(obj_path).sample(2048)[0]
+        angle = 0.0
+
+        if AUGMENT_3D['rotate']:
+            rgb, silhouette, angle = self.rotate_img(rgb, silhouette)
 
         return {
             'rgb': rgb,
             'silhouette': silhouette,
             'points': points,
+            'angle': angle,
         }
+
+    @staticmethod
+    def rotate_img(rgb: torch.Tensor, silhouette: torch.Tensor) -> (torch.Tensor, torch.Tensor, float):
+        angle = torch.rand(1) * 360
+        rotate_transform = transforms.Compose([
+            transforms.ToPILImage(),
+            transforms.RandomRotation((angle, angle)),
+            transforms.ToTensor()
+        ])
+
+        return rotate_transform(rgb), rotate_transform(silhouette), angle.item()
