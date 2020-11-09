@@ -79,13 +79,14 @@ def generate_acd_dataset(dataset_path: str, data_type='train'):
             convex_hulls = get_trimesh_from_kaolinmesh(mesh).convex_decomposition(6)
         except Exception as e:
             print('[ACD Exception] obj path = %s, %s' % (data.canonical_obj_path, str(e)))
-            convex_hulls = []
+            continue
 
         try:
             if len(convex_hulls) != 6:
                 print('convex hull num != 6, obj path =', data.canonical_obj_path)
         except Exception as e:
             print('[Hull Num Exception] obj path = %s, %s' % (data.canonical_obj_path, str(e)))
+            continue
 
         vertices, faces = [], []
 
@@ -93,7 +94,7 @@ def generate_acd_dataset(dataset_path: str, data_type='train'):
             vertices.append(np.array(convex_hull.vertices).tolist())
             faces.append(np.array(convex_hull.faces).tolist())
 
-        json_data = json.dumps({'vertices': vertices, 'faces': faces})
+        json_data = json.dumps({'vertices': vertices, 'faces': faces, 'obj': data.canonical_obj_path})
         with open(os.path.join(dataset_path, 'mesh_%.6d.json' % n), 'w') as f:
             f.write(json_data)
             f.close()
