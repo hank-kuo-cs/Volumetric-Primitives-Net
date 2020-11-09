@@ -37,7 +37,7 @@ def load_dataloader(data_type):
 
 
 def generate_point_mixup_dataset(dataset_path):
-    dataloader = load_dataloader(dataset_type)
+    dataloader = load_dataloader('train')
     progress_bar = tqdm(dataloader)
 
     n = 1
@@ -67,6 +67,7 @@ def generate_acd_dataset(dataset_path: str, data_type='train'):
     dataset = ShapeNetDataset(data_type)
 
     n = 0
+    obj_paths = []
 
     for data in tqdm(dataset.shapenet_datas):
         mesh = TriangleMesh.from_obj(data.canonical_obj_path)
@@ -74,6 +75,10 @@ def generate_acd_dataset(dataset_path: str, data_type='train'):
 
         if len(convex_hulls) != 6:
             print('convex hull num != 6, obj path =', data.canonical_obj_path)
+
+        if data.canonical_obj_path in obj_paths:
+            continue
+        obj_paths.append(data.canonical_obj_path)
 
         vertices, faces = [], []
 
