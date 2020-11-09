@@ -70,15 +70,22 @@ def generate_acd_dataset(dataset_path: str, data_type='train'):
     obj_paths = []
 
     for data in tqdm(dataset.shapenet_datas):
-        mesh = TriangleMesh.from_obj(data.canonical_obj_path)
-        convex_hulls = get_trimesh_from_kaolinmesh(mesh).convex_decomposition(6)
-
-        if len(convex_hulls) != 6:
-            print('convex hull num != 6, obj path =', data.canonical_obj_path)
-
         if data.canonical_obj_path in obj_paths:
             continue
         obj_paths.append(data.canonical_obj_path)
+
+        try:
+            mesh = TriangleMesh.from_obj(data.canonical_obj_path)
+            convex_hulls = get_trimesh_from_kaolinmesh(mesh).convex_decomposition(6)
+        except Exception as e:
+            print('[ACD Exception] obj path = %s, %s' % (data.canonical_obj_path, str(e)))
+            convex_hulls = []
+
+        try:
+            if len(convex_hulls) != 6:
+                print('convex hull num != 6, obj path =', data.canonical_obj_path)
+        except Exception as e:
+            print('[Hull Num Exception] obj path = %s, %s' % (data.canonical_obj_path, str(e)))
 
         vertices, faces = [], []
 
