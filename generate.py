@@ -22,6 +22,7 @@ def parse_args():
     parser.add_argument('-gpu', '--gpu_device', type=str, default='0', help='gpu device number')
     parser.add_argument('-d', '--dataset', type=str, help='point_mixup, acd')
     parser.add_argument('-p', '--path', type=str, help='dataset path')
+    parser.add_argument('-t', '--type', type=str, help='dataset type')
 
     return parser.parse_args()
 
@@ -36,7 +37,7 @@ def load_dataloader(data_type):
 
 
 def generate_point_mixup_dataset(dataset_path):
-    dataloader = load_dataloader('train')
+    dataloader = load_dataloader(dataset_type)
     progress_bar = tqdm(dataloader)
 
     n = 1
@@ -62,12 +63,12 @@ def generate_point_mixup_dataset(dataset_path):
                 n += 1
 
 
-def generate_acd_dataset(dataset_path: str):
-    dataset = ShapeNetDataset('train')
+def generate_acd_dataset(dataset_path: str, data_type='train'):
+    dataset = ShapeNetDataset(data_type)
 
     n = 0
 
-    for data in dataset.shapenet_datas:
+    for data in tqdm(dataset.shapenet_datas):
         mesh = TriangleMesh.from_obj(data.canonical_obj_path)
         convex_hulls = get_trimesh_from_kaolinmesh(mesh).convex_decomposition(6)
 
@@ -91,12 +92,12 @@ def generate_acd_dataset(dataset_path: str):
 if __name__ == '__main__':
     args = parse_args()
     os.environ['CUDA_VISIBLE_DEVICES'] = args.gpu_device
-    dataset_path = args.path
+    dataset_path = os.path.join(args.path, args.type)
     os.makedirs(dataset_path, exist_ok=True)
 
     if args.dataset == 'point_mixup':
         generate_point_mixup_dataset(dataset_path)
     elif args.dataset == 'acd':
-        generate_acd_dataset(dataset_path)
+        generate_acd_dataset(dataset_path, args.type)
 
 
