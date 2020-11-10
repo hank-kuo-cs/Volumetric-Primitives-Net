@@ -116,7 +116,7 @@ def generate_acd_mix_dataset(dataset_path, args):
             continue
         obj_paths.append(data.canonical_obj_path)
 
-    for i in range(dataset_obj_num):
+    for i in tqdm(range(dataset_obj_num)):
         rand_two_obj_paths = random.sample(obj_paths, 2)
 
         obj1_path = rand_two_obj_paths[0]
@@ -184,6 +184,6 @@ if __name__ == '__main__':
     elif args.dataset == 'acd':
         generate_acd_dataset(dataset_path, args.type)
     elif args.dataset == 'acd_mix':
-        generate_acd_mix_dataset(dataset_path, args.type)
+        generate_acd_mix_dataset(dataset_path, args)
 
 
