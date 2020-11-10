@@ -108,7 +108,7 @@ def generate_acd_dataset(dataset_path: str, data_type='train'):
 def generate_acd_mix_dataset(dataset_path, args):
     dataset = ShapeNetDataset(args.type)
     obj_paths = []
-    dataset_obj_num = args.data_num
+    dataset_obj_num = args.obj_num
     n = 0
 
     for data in tqdm(dataset.shapenet_datas):
