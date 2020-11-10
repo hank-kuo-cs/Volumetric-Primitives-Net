@@ -37,25 +37,17 @@ def is_center(mesh: TriangleMesh) -> bool:
 def random_scale(convex_hulls: list) -> list:
     scale = 0.8 + torch.rand(1).item() * 0.4  # s~[0.8, 1.2]
 
-    if random.choice([True, False]):
-        print('scale', scale)
-        for i, convex_hull in enumerate(convex_hulls):
-            convex_hulls[i].vertices *= scale
-    else:
-        print('no scale')
+    for i, convex_hull in enumerate(convex_hulls):
+        convex_hulls[i].vertices *= scale
 
     return convex_hulls
 
 
 def random_translate(convex_hulls: list) -> list:
-    t = (torch.rand(1).item() - 0.5) / 4  # t~[-0.125, 0.125]
+    t = (torch.rand(1).item() - 0.5) / 5  # t~[-0.1, 0.1]
 
-    if random.choice([True, False]):
-        print('translate', t)
-        for i, convex_hull in enumerate(convex_hulls):
-            convex_hulls[i].vertices[:, 1] += t
-    else:
-        print('no translate')
+    for i, convex_hull in enumerate(convex_hulls):
+        convex_hulls[i].vertices[:, 1] += t
 
     return convex_hulls
 
@@ -64,7 +56,7 @@ def random_rotate_forward_axis(convex_hulls: list) -> list:
     y, z = [0, 1, 0], [0, 0, 1]
     #     axis = random.choice([y, z])
     axis = z
-    angle = random.choice([90.0, -90.0, 180.0, -180.0])
+    angle = random.choice([90.0, -90.0, 0.0, 180.0, -180.0])
 
     for i, convex_hull in enumerate(convex_hulls):
         convex_hulls[i].vertices = rotate_points_forward_vec(convex_hull.vertices, angle, axis)
