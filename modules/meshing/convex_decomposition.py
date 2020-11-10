@@ -8,6 +8,8 @@ def approximate_convex_decomposition(mesh: TriangleMesh, hull_num=DECOMPOSE_CONV
         -> (TriangleMesh, torch.Tensor, torch.Tensor):
     mesh = get_trimesh_from_kaolinmesh(mesh)
     convex_list = mesh.convex_decomposition(hull_num, beta=0.8, alpha=0.8, concavity=0.01)
+    if not isinstance(convex_list, list):
+        convex_list = [convex_list]
     convex_list = [get_kaolinmesh_from_trimesh(convex) for convex in convex_list]
 
     mesh, uv, texture = merge_meshes(convex_list)
