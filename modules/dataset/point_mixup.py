@@ -16,7 +16,7 @@ img_transform = transforms.Compose([
 vp_num = CUBOID_NUM + SPHERE_NUM + CONE_NUM
 
 
-class PointMixUpDatset(Dataset):
+class PointMixUpDataset(Dataset):
     def __init__(self, dataset_name):
         self.dataset_path = os.path.join(DATASET_ROOT, dataset_name)
         self.rgb_paths = sorted(glob(self.dataset_path + '/rgb*.png'))
