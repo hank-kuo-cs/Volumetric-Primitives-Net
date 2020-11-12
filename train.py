@@ -384,7 +384,7 @@ def train_acdmix(args):
 
         for data in progress_bar:
             rgbs, silhouettes = data['rgb'].to(DEVICE), data['silhouette'].to(DEVICE)
-            points, angles = data['points'].to(DEVICE), data['angle'].float().to(DEVICE)
+            points, angles = data['points'].to(DEVICE), data['rotate_angle'].float().to(DEVICE)
 
             if AUGMENT_3D['rotate']:
                 points = rotate_points_forward_x_axis(points, angles)
