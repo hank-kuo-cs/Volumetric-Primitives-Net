@@ -439,5 +439,7 @@ if __name__ == '__main__':
     os.environ['CUDA_VISIBLE_DEVICES'] = DEVICE_NUM
     if args.point_mixup:
         train_pointmixup(args)
+    elif args.acd_mix:
+        train_acdmix(args)
     else:
         train(args)
