@@ -18,8 +18,8 @@ vp_num = CUBOID_NUM + SPHERE_NUM + CONE_NUM
 
 
 class ACDMixDataset(Dataset):
-    def __init__(self, dataset_name):
-        self.dataset_path = os.path.join(DATASET_ROOT, dataset_name)
+    def __init__(self, dataset_path):
+        self.dataset_path = dataset_path
         self.image_paths = sorted(glob(self.dataset_path + '/img_*.png'))
         self.obj_paths = sorted(glob(self.dataset_path + '/mesh_*.obj'))
         self.meta_paths = sorted(glob(self.dataset_path + '/meta_*.json'))

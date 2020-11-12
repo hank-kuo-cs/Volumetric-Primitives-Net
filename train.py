@@ -366,7 +366,7 @@ def train_pointmixup(args):
 
 
 def train_acdmix(args):
-    train_dataset = args.acd_mix
+    train_dataset = ACDMixDataset(args.acd_mix)
     train_dataloader = DataLoader(dataset=train_dataset, batch_size=BATCH_SIZE, shuffle=True, num_workers=16)
     dir_path, checkpoint_path = set_file_path()
     model = load_model(args.pretrain_model)
