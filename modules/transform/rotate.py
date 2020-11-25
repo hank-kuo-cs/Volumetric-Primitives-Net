@@ -9,6 +9,8 @@ def rotate_points(points: torch.Tensor, quaternions: torch.Tensor):
     Rotate input points with quaternion.
     :param points: torch.Tensor(B, N, 3)
     :param quaternions: torch.Tensor(B, 4)
+        [:, :3] = direction vectors
+        [:, 3] = rotate angles between [0, 1] (will be mapped to [0, 2pi])
     :return: rotated points (torch.Tensor(B, N, 3))
     """
     check_points(points)

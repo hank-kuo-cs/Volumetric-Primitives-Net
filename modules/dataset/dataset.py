@@ -8,16 +8,13 @@ from torch.utils.data import Dataset
 from torchvision.transforms import transforms
 from kaolin.rep import TriangleMesh
 from .data import ShapeNetData
+from .classes import Classes
 from ..transform.rotate import rotate_points
 from config import *
 
-
-class_dict = {'airplane': '02691156', 'rifle': '04090263', 'display': '03211117', 'table': '04379243',
-              'telephone': '04401088', 'car': '02958343', 'chair': '03001627', 'bench': '02828884', 'lamp': '03636649',
-              'cabinet': '02933112', 'loudspeaker': '03691459', 'sofa': '04256520', 'watercraft': '04530566'}
-
 img_transform = transforms.Compose([
     transforms.Resize(IMG_SIZE),
+    transforms.ColorJitter(brightness=0.4, saturation=0.4, contrast=0.4),
     transforms.ToTensor()
 ])
 
@@ -26,7 +23,7 @@ vp_num = CUBOID_NUM + SPHERE_NUM + CONE_NUM
 
 class ShapeNetDataset(Dataset):
     def __init__(self, dataset_type: str):
-        assert dataset_type == 'train' or dataset_type == 'test'
+        assert dataset_type == 'train' or dataset_type == 'test_seen' or dataset_type == 'test_unseen'
         self.dataset_type = dataset_type
         self.shapenet_datas = []
         self.split_data = {}
@@ -40,16 +37,21 @@ class ShapeNetDataset(Dataset):
         shapenet_data = self.shapenet_datas[item]
 
         dist, elev, azim = shapenet_data.dist, shapenet_data.elev, shapenet_data.azim
-        rgb, silhouette = self._load_rgb_and_silhouette(shapenet_data.img_path)
+        rgb, silhouette, rotate_angle = self._load_rgb_and_silhouette(shapenet_data.img_path)
 
         canonical_points = self._load_sample_points(shapenet_data.canonical_obj_path)
         view_center_points = self._load_sample_points(shapenet_data.view_center_obj_path)
+
+        if IS_DIST_INVARIANT:
+            view_center_points *= dist
 
         return {
             'rgb': rgb,
             'silhouette': silhouette,
             'canonical_points': canonical_points,
             'view_center_points': view_center_points,
+            'class_index': shapenet_data.class_index,
+            'rotate_angle': rotate_angle,
             'dist': dist,
             'elev': elev,
             'azim': azim
@@ -57,11 +59,13 @@ class ShapeNetDataset(Dataset):
 
     def _load_data(self):
         self._load_split_data()
-        CLASSES = TRAIN_CLASSES if self.dataset_type == 'train' else TEST_CLASSES
+        CLASSES = {'train': TRAIN_CLASSES,
+                   'test_seen': TEST_SEEN_CLASSES,
+                   'test_unseen': TEST_UNSEEN_CLASSES}[self.dataset_type]
 
         dataset_indices = self.split_data['train'] if self.dataset_type == 'train' else self.split_data['test']
 
-        class_ids = [class_dict[class_name] for class_name in CLASSES]
+        class_ids = [Classes.get_id_by_name(class_name) for class_name in CLASSES]
         class_model_num = [0 for class_name in CLASSES]
 
         for i in tqdm(range(len(dataset_indices))):
@@ -70,7 +74,7 @@ class ShapeNetDataset(Dataset):
                 continue
 
             class_index = class_ids.index(class_id)
-            if 0 < LITTLE_NUM[self.dataset_type] <= class_model_num[class_index]:
+            if 0 < LITTLE_NUM['train' if self.dataset_type == 'train' else 'test'] <= class_model_num[class_index]:
                 continue
             class_model_num[class_index] += 1
 
@@ -84,6 +88,7 @@ class ShapeNetDataset(Dataset):
                 shapenet_data = ShapeNetData(img_path=imgs_path[j],
                                              canonical_obj_path=object_center_obj_path,
                                              view_center_obj_path=view_center_objs_path[j],
+                                             class_index=Classes.get_class_index_by_id(class_id),
                                              dist=dists[j], elev=elevs[j], azim=azims[j])
                 self.shapenet_datas.append(shapenet_data)
 
@@ -107,16 +112,31 @@ class ShapeNetDataset(Dataset):
 
         return imgs_path, azims, elevs, dists
 
-    @staticmethod
-    def _load_rgb_and_silhouette(img_path: str) -> (torch.Tensor, torch.Tensor):
+    def _load_rgb_and_silhouette(self, img_path: str) -> (torch.Tensor, torch.Tensor):
+        angle = 0.0
         img = Image.open(img_path)
         img = img_transform(img)
+
+        if AUGMENT_3D['rotate'] and self.dataset_type == 'train':
+            img, angle = self.rotate_img(img)
+
         rgb, silhouette = img[:3], img[3].unsqueeze(0)
 
         if IS_NORMALIZE:
             rgb = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])(rgb)
 
-        return rgb, silhouette
+        return rgb, silhouette, angle
+
+    @staticmethod
+    def rotate_img(img: torch.Tensor) -> (torch.Tensor, float):
+        angle = torch.rand(1) * 360
+        rotate_transform = transforms.Compose([
+            transforms.ToPILImage(),
+            transforms.RandomRotation((angle, angle)),
+            transforms.ToTensor()
+        ])
+
+        return rotate_transform(img), angle.item()
 
     @staticmethod
     def _load_meta(meta_path: str) -> (list, list, list):
@@ -141,7 +161,8 @@ class ShapeNetDataset(Dataset):
     @staticmethod
     def _load_sample_points(obj_path: str) -> torch.Tensor:
         mesh = TriangleMesh.from_obj(obj_path)
-        return mesh.sample(SAMPLE_NUM * vp_num)[0]
+        # return mesh.sample(SAMPLE_NUM * vp_num)[0]
+        return mesh.sample(2048)[0]
 
     @staticmethod
     def transform_to_view_center(vertices: torch.Tensor, dist: float, elev: float, azim: float) -> torch.Tensor:

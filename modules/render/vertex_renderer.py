@@ -7,23 +7,23 @@ from config import DEVICE
 renderer = DIBRenderer(128, 128)
 
 
-class Renderer:
+class VertexRenderer:
     def __init__(self):
         pass
 
     @classmethod
-    def render(cls, mesh, dist, elev, azim):
+    def render(cls, mesh, dist, elev, azim, colors=None):
         isinstance(mesh, TriangleMesh)
         dist, elev, azim = cls.check_camera_parameters(dist, elev, azim)
         renderer.set_look_at_parameters([azim], [elev], [dist])
 
         vertices = mesh.vertices.clone().to(DEVICE)[None]
         faces = mesh.faces.clone().to(DEVICE)
-        colors = torch.ones_like(vertices).to(DEVICE)
+        colors = torch.ones_like(vertices).to(DEVICE) if colors is None else colors
 
-        render_rgb, render_alpha, face_norms = renderer.forward(points=[vertices, faces], colors_bxpx3=colors)
+        render_rgbs, render_alphas, face_norms = renderer.forward(points=[vertices, faces], colors_bxpx3=colors)
 
-        return render_rgb, render_alpha, face_norms
+        return render_rgbs, render_alphas, face_norms
 
     @staticmethod
     def check_camera_parameters(dist, elev, azim):

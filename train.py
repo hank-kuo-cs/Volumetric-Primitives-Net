@@ -7,12 +7,13 @@ from torch.utils.data import DataLoader
 from torch.optim import Adam
 
 from modules.network import VPNetOneRes, VPNetTwoRes
-from modules.dataset import ShapeNetDataset
+from modules.dataset import ShapeNetDataset, PointMixUpDataset, ACDMixDataset
 from modules.meshing import Meshing
 from modules.sampling import Sampling
-from modules.loss import ChamferDistanceLoss, SilhouetteLoss
+from modules.loss import ChamferDistanceLoss, SilhouetteLoss, VPDiverseLoss, EarthMoverDistanceLoss
 from modules.visualize import Visualizer, TensorboardWriter
-from modules.transform import view_to_obj_points
+from modules.transform import view_to_obj_points, rotate_points_forward_x_axis
+from modules.augmentation import cut_mix_data, point_mixup_data
 from config import *
 
 
@@ -32,8 +33,9 @@ def set_seed(manual_seed=MANUAL_SEED):
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('-pre', '--pretrain_model', type=str,
-                        help='Load a pretrained model to continue training')
+    parser.add_argument('-pre', '--pretrain_model', type=str, help='Load a pretrained model to continue training')
+    parser.add_argument('-p_mix', '--point_mixup', type=str, help='Use point mixup dataset to train')
+    parser.add_argument('-a_mix', '--acd_mix', type=str, help='Use acd mix dataset to train')
 
     return parser.parse_args()
 
@@ -51,10 +53,11 @@ def set_file_path():
     return dir_path, checkpoint_path
 
 
-def load_dataset():
+def load_dataset(point_mixup_dataset_name=''):
     print('Load dataset...')
-    train_dataset = ShapeNetDataset('train')
-    train_dataloader = DataLoader(dataset=train_dataset, batch_size=BATCH_SIZE, shuffle=True, num_workers=4)
+    train_dataset = ShapeNetDataset('train') \
+        if not point_mixup_dataset_name else PointMixUpDataset(point_mixup_dataset_name)
+    train_dataloader = DataLoader(dataset=train_dataset, batch_size=BATCH_SIZE, shuffle=True, num_workers=16)
     print('Dataset size =', len(train_dataset))
 
     return train_dataloader
@@ -146,13 +149,13 @@ def compose_vp_meshes(batch_vp_meshes):
     return batch_meshes
 
 
-def calculate_points_loss(predict_points, canonical_points, view_center_points, dists, elevs, azims):
+def calculate_cd_loss(predict_points, canonical_points, view_center_points, dists, elevs, azims, angles):
     cd_loss_func = ChamferDistanceLoss()
 
     if not IS_VIEW_CENTER:
         return torch.tensor(0.0).to(DEVICE), cd_loss_func(predict_points, canonical_points) * L_CAN_CD
 
-    predict_canonical_points = view_to_obj_points(predict_points, dists, elevs, azims)
+    predict_canonical_points = view_to_obj_points(predict_points, dists, elevs, azims, angles)
 
     view_center_cd_loss = cd_loss_func(predict_points, view_center_points) * L_VIEW_CD
     obj_center_cd_loss = cd_loss_func(predict_canonical_points, canonical_points) * L_CAN_CD
@@ -161,7 +164,7 @@ def calculate_points_loss(predict_points, canonical_points, view_center_points, 
 
 
 def calculate_silhouette_loss(predict_meshes, silhouettes, dists, elevs, azims):
-    if L_SIL == 0:
+    if not L_SIL:
         return torch.tensor(0.0).to(DEVICE)
 
     silhouette_loss_func = SilhouetteLoss()
@@ -173,17 +176,41 @@ def calculate_silhouette_loss(predict_meshes, silhouettes, dists, elevs, azims):
     return silhouette_loss_func(predict_meshes, silhouettes, dists, elevs, azims) * L_SIL
 
 
-def show_loss_one_tensorboard(epoch, avg_losses):
+def calculate_vp_div_loss(translates, gt_points):
+    if not L_VP_DIV:
+        return torch.tensor(0.0).to(DEVICE)
+
+    vp_div_loss_func = VPDiverseLoss()
+
+    return vp_div_loss_func(translates, gt_points) * L_VP_DIV
+
+
+def calculate_emd_loss(predict_points, gt_points):
+    if not L_EMD:
+        return torch.tensor(0.0).to(DEVICE)
+
+    emd_loss_func = EarthMoverDistanceLoss()
+    dist, assignment = emd_loss_func(predict_points, gt_points, 0.005, 50)
+
+    return torch.sqrt(dist).mean()
+
+
+def show_loss_on_tensorboard(epoch, avg_losses):
     if L_VIEW_CD:
         tensorboard_writer.add_scalar('train/view_cd_loss', epoch, avg_losses['view_cd'])
     if L_CAN_CD:
         tensorboard_writer.add_scalar('train/obj_cd_loss', epoch, avg_losses['obj_cd'])
     if L_SIL:
         tensorboard_writer.add_scalar('train/silhouette_loss', epoch, avg_losses['sil'])
+    if L_VP_DIV:
+        tensorboard_writer.add_scalar('train/vp_diverse_loss', epoch, avg_losses['vp_div'])
+    if L_EMD:
+        tensorboard_writer.add_scalar('train/emd_loss', epoch, avg_losses['emd'])
 
 
 def train(args):
-    train_dataloader = load_dataset()
+    train_dataset = ShapeNetDataset('train')
+    train_dataloader = DataLoader(dataset=train_dataset, batch_size=BATCH_SIZE, shuffle=True, num_workers=16)
     dir_path, checkpoint_path = set_file_path()
 
     model = load_model(args.pretrain_model)
@@ -192,23 +219,31 @@ def train(args):
     # Training Process
     for epoch_now in range(EPOCH_NUM):
         model.train()
-        avg_losses = {'view_cd': 0.0, 'obj_cd': 0.0, 'sil': 0.0}
+        avg_losses = {'view_cd': 0.0, 'obj_cd': 0.0, 'sil': 0.0, 'vp_div': 0.0, 'emd': 0.0}
         n = 0
 
         progress_bar = tqdm(train_dataloader)
 
         for data in progress_bar:
             rgbs, silhouettes = data['rgb'].to(DEVICE), data['silhouette'].to(DEVICE)
+            rotate_angles = data['rotate_angle'].float().to(DEVICE)
             canonical_points, view_center_points = data['canonical_points'].to(DEVICE), data['view_center_points'].to(DEVICE)
             dists, elevs, azims = data['dist'].float().to(DEVICE), data['elev'].float().to(DEVICE), data['azim'].float().to(DEVICE)
+
+            if AUGMENT_3D['rotate']:
+                view_center_points = rotate_points_forward_x_axis(view_center_points, rotate_angles)
+            if AUGMENT_3D['cutmix']:
+                rgbs, silhouettes, view_center_points = cut_mix_data(rgbs, silhouettes, view_center_points)
+            if AUGMENT_3D['point_mixup']:
+                rgbs, silhouettes, view_center_points = point_mixup_data(view_center_points)
 
             volumes, rotates, translates = model(rgbs)
 
             # Chamfer Distance Loss
             predict_points = sample_predict_points(volumes, rotates, translates)
 
-            view_cd_loss, obj_cd_loss = calculate_points_loss(predict_points, canonical_points, view_center_points,
-                                                              dists, elevs, azims)
+            view_cd_loss, obj_cd_loss = calculate_cd_loss(predict_points, canonical_points, view_center_points,
+                                                          dists, elevs, azims, rotate_angles)
 
             # Silhouette Loss
             batch_vp_meshes = get_vp_meshes(volumes, rotates, translates)
@@ -216,7 +251,13 @@ def train(args):
 
             sil_loss = calculate_silhouette_loss(predict_meshes, silhouettes, dists, elevs, azims)
 
-            total_loss = view_cd_loss + obj_cd_loss + sil_loss
+            # VP Diverse Loss
+            vp_div_loss = calculate_vp_div_loss(translates, view_center_points if IS_VIEW_CENTER else canonical_points)
+
+            # EMD Loss
+            emd_loss = calculate_emd_loss(predict_points, view_center_points)
+
+            total_loss = view_cd_loss + obj_cd_loss + sil_loss + vp_div_loss + emd_loss
 
             optimizer.zero_grad()
             total_loss.backward()
@@ -226,16 +267,160 @@ def train(args):
             avg_losses['view_cd'] += view_cd_loss.item()
             avg_losses['obj_cd'] += obj_cd_loss.item()
             avg_losses['sil'] += sil_loss.item()
-            progress_bar.set_description('View CD Loss = %.6f, Obj CD Loss = %.6f, Sil Loss = %.6f'
-                                         % (view_cd_loss.item(), obj_cd_loss.item(), sil_loss.item()))
+            avg_losses['vp_div'] += vp_div_loss.item()
+            avg_losses['emd'] += emd_loss.item()
+
+            progress_bar.set_description(
+                'View CD Loss = %.6f, Obj CD Loss = %.6f, Sil Loss = %.6f, VP Div Loss = %.6f, EMD Loss = %.6f'
+                % (view_cd_loss.item(), obj_cd_loss.item(), sil_loss.item(), vp_div_loss.item(), emd_loss.item()))
 
         avg_losses['view_cd'] /= n
         avg_losses['obj_cd'] /= n
         avg_losses['sil'] /= n
+        avg_losses['vp_div'] /= n
+        avg_losses['emd'] /= n
 
-        print('Epoch %d. View CD Loss = %.6f. Obj CD Loss = %.6f, Sil Loss = %.6f\n'
-              % (epoch_now + 1, avg_losses['view_cd'], avg_losses['obj_cd'], avg_losses['sil']))
-        show_loss_one_tensorboard(epoch_now + 1, avg_losses)
+        print('[Epoch %d AVG Loss] View CD Loss = %.6f. Obj CD Loss = %.6f, Sil Loss = %.6f, VP Div Loss = %.6f, EMD Loss = %.6f\n'
+              % (epoch_now + 1, avg_losses['view_cd'], avg_losses['obj_cd'], avg_losses['sil'], avg_losses['vp_div'], avg_losses['emd']))
+        show_loss_on_tensorboard(epoch_now + 1, avg_losses)
+
+        # Record some result
+        if (epoch_now + 1) % 5 == 0:
+            for b in range(BATCH_SIZE):
+                img = rgbs[b]
+                vp_meshes = batch_vp_meshes[b]
+                save_name = os.path.join(dir_path, 'epoch%d-%d.png' % (epoch_now + 1, b))
+                Visualizer.render_vp_meshes(img, vp_meshes, save_name, dist=SHOW_DIST)
+
+            torch.save(model.state_dict(), os.path.join(checkpoint_path, 'model_epoch%03d.pth' % (epoch_now + 1)))
+
+
+def train_pointmixup(args):
+    train_dataset = PointMixUpDataset(args.point_mixup)
+    train_dataloader = DataLoader(dataset=train_dataset, batch_size=BATCH_SIZE, shuffle=True, num_workers=16)
+
+    dir_path, checkpoint_path = set_file_path()
+
+    model = load_model(args.pretrain_model)
+    optimizer = load_optimizer(model)
+
+    cd_loss_func = ChamferDistanceLoss()
+
+    # Training Process
+    for epoch_now in range(EPOCH_NUM):
+        model.train()
+        avg_losses = {'view_cd': 0.0, 'vp_div': 0.0, 'emd': 0.0}
+        n = 0
+
+        progress_bar = tqdm(train_dataloader)
+
+        for data in progress_bar:
+            rgbs, silhouettes = data['rgb'].to(DEVICE), data['silhouette'].to(DEVICE)
+            points, angles = data['points'].to(DEVICE), data['angle'].float().to(DEVICE)
+
+            if AUGMENT_3D['rotate']:
+                points = rotate_points_forward_x_axis(points, angles)
+
+            volumes, rotates, translates = model(rgbs)
+
+            # Chamfer Distance Loss
+            predict_points = sample_predict_points(volumes, rotates, translates)
+
+            cd_loss = cd_loss_func(predict_points, points) * L_VIEW_CD
+            vp_div_loss = calculate_vp_div_loss(translates, points) * L_VP_DIV
+            emd_loss = calculate_emd_loss(predict_points, points) * L_EMD
+
+            total_loss = cd_loss + vp_div_loss + emd_loss
+
+            optimizer.zero_grad()
+            total_loss.backward()
+            optimizer.step()
+
+            n += 1
+            avg_losses['view_cd'] += cd_loss.item()
+            avg_losses['vp_div'] += vp_div_loss.item()
+            avg_losses['emd'] += emd_loss.item()
+
+            progress_bar.set_description('CD Loss = %.6f, VP Div Loss = %.6f, EMD Loss = %.6f'
+                                         % (cd_loss.item(), vp_div_loss.item(), emd_loss.item()))
+
+        avg_losses['view_cd'] /= n
+        avg_losses['vp_div'] /= n
+        avg_losses['emd'] /= n
+
+        print('[Epoch %d AVG Loss] CD Loss = %.6f, VP Div Loss = %.6f, EMD Loss = %.6f\n'
+              % (epoch_now + 1, avg_losses['view_cd'], avg_losses['vp_div'], avg_losses['emd']))
+        show_loss_on_tensorboard(epoch_now + 1, avg_losses)
+
+        batch_vp_meshes = get_vp_meshes(volumes, rotates, translates)
+
+        # Record some result
+        if (epoch_now + 1) % 5 == 0:
+            for b in range(BATCH_SIZE):
+                img = rgbs[b]
+                vp_meshes = batch_vp_meshes[b]
+                save_name = os.path.join(dir_path, 'epoch%d-%d.png' % (epoch_now + 1, b))
+                Visualizer.render_vp_meshes(img, vp_meshes, save_name, dist=SHOW_DIST)
+
+            torch.save(model.state_dict(), os.path.join(checkpoint_path, 'model_epoch%03d.pth' % (epoch_now + 1)))
+
+
+def train_acdmix(args):
+    train_dataset = ACDMixDataset(args.acd_mix)
+    train_dataloader = DataLoader(dataset=train_dataset, batch_size=BATCH_SIZE, shuffle=True, num_workers=16)
+    dir_path, checkpoint_path = set_file_path()
+    model = load_model(args.pretrain_model)
+    optimizer = load_optimizer(model)
+
+    cd_loss_func = ChamferDistanceLoss()
+
+    # Training Process
+    for epoch_now in range(EPOCH_NUM):
+        model.train()
+        avg_losses = {'view_cd': 0.0, 'vp_div': 0.0, 'emd': 0.0}
+        n = 0
+
+        progress_bar = tqdm(train_dataloader)
+
+        for data in progress_bar:
+            rgbs, silhouettes = data['rgb'].to(DEVICE), data['silhouette'].to(DEVICE)
+            points, angles = data['points'].to(DEVICE), data['rotate_angle'].float().to(DEVICE)
+
+            if AUGMENT_3D['rotate']:
+                points = rotate_points_forward_x_axis(points, angles)
+
+            volumes, rotates, translates = model(rgbs)
+
+            # Chamfer Distance Loss
+            predict_points = sample_predict_points(volumes, rotates, translates)
+
+            cd_loss = cd_loss_func(predict_points, points) * L_VIEW_CD
+            vp_div_loss = calculate_vp_div_loss(translates, points) * L_VP_DIV
+            emd_loss = calculate_emd_loss(predict_points, points) * L_EMD
+
+            total_loss = cd_loss + vp_div_loss + emd_loss
+
+            optimizer.zero_grad()
+            total_loss.backward()
+            optimizer.step()
+
+            n += 1
+            avg_losses['view_cd'] += cd_loss.item()
+            avg_losses['vp_div'] += vp_div_loss.item()
+            avg_losses['emd'] += emd_loss.item()
+
+            progress_bar.set_description('CD Loss = %.6f, VP Div Loss = %.6f, EMD Loss = %.6f'
+                                         % (cd_loss.item(), vp_div_loss.item(), emd_loss.item()))
+
+        avg_losses['view_cd'] /= n
+        avg_losses['vp_div'] /= n
+        avg_losses['emd'] /= n
+
+        print('[Epoch %d AVG Loss] CD Loss = %.6f, VP Div Loss = %.6f, EMD Loss = %.6f\n'
+              % (epoch_now + 1, avg_losses['view_cd'], avg_losses['vp_div'], avg_losses['emd']))
+        show_loss_on_tensorboard(epoch_now + 1, avg_losses)
+
+        batch_vp_meshes = get_vp_meshes(volumes, rotates, translates)
 
         # Record some result
         if (epoch_now + 1) % 5 == 0:
@@ -252,4 +437,9 @@ if __name__ == '__main__':
     args = parse_args()
     set_seed()
     os.environ['CUDA_VISIBLE_DEVICES'] = DEVICE_NUM
-    train(args)
+    if args.point_mixup:
+        train_pointmixup(args)
+    elif args.acd_mix:
+        train_acdmix(args)
+    else:
+        train(args)

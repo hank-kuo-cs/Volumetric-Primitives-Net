@@ -1,18 +1,20 @@
 # CUDA
 DEVICE = 'cuda'
-DEVICE_NUM = '6'
+DEVICE_NUM = ''
 
 # Hyper parameter
 LR = 1e-4
 W_DECAY = 1e-6
-SAMPLE_NUM = 200
+SAMPLE_NUM = 128
 BATCH_SIZE = 8
 EPOCH_NUM = 50
 CD_W1 = 1.0
 CD_W2 = 1.0
 L_VIEW_CD = 1.0
-L_CAN_CD = 1.0
+L_CAN_CD = 0.0
 L_SIL = 0.0
+L_VP_DIV = 0.1
+L_EMD = 0.0
 
 # Network
 MANUAL_SEED = 1234
@@ -31,22 +33,26 @@ DECAY_VOLUME_RES_RATE = 0.1
 CUBOID_NUM = 8
 SPHERE_NUM = 8
 CONE_NUM = 0
+VP_NUM = CUBOID_NUM + SPHERE_NUM + CONE_NUM
 
 # Visualize
 EXPERIMENT_PATH = 'experiment'
-SHOW_DIST = 2
+SHOW_DIST = 1
 TENSORBOARD_PATH = '/home/hank/3d/Tensorboard'
-EXPERIMENT_NAME = 'view_center_add_can_cd_loss'
+EXPERIMENT_NAME = ''
 
 # Dataset
-DATASET_ROOT = '/eva_data/hank'
-IS_VIEW_CENTER = False
-IS_NORMALIZE = False
+DATASET_ROOT = '/eva_data/hdd1/hank'
 LITTLE_NUM = {'train': 100, 'test': 20}
+AUGMENT_3D = {'rotate': False, 'cutmix': False, 'scale': False, 'point_mixup': False}
 IMG_SIZE = 128
+IS_VIEW_CENTER = True
+IS_NORMALIZE = False
+IS_DIST_INVARIANT = False
+DECOMPOSE_CONVEX_NUM = 16
 
 # airplane, rifle, display, table, telephone, car, chair, bench, lamp, cabinet, loudspeaker, sofa, watercraft
 TRAIN_CLASSES = ['airplane', 'car', 'chair']
-TEST_CLASSES = ['airplane', 'car', 'chair']
-# TEST_CLASSES = ['rifle', 'display', 'table', 'telephone',
-# 'bench', 'lamp', 'cabinet', 'loudspeaker', 'sofa', 'watercraft']
+TEST_SEEN_CLASSES = ['airplane', 'car', 'chair']
+TEST_UNSEEN_CLASSES = ['rifle', 'display', 'table', 'telephone',
+                       'bench', 'lamp', 'cabinet', 'loudspeaker', 'sofa', 'watercraft']
