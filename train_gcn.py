@@ -70,12 +70,12 @@ def get_vp_meshes(volumes, rotates, translates):
     vp_num = 16
     meshing = Meshing.sphere_meshing
 
-    batch_vp_meshes = [[] for i in range(volumes.size(0))]  # (B, K)
+    batch_vp_meshes = [[] for i in range(volumes[0].size(0))]  # (B, K)
 
     for i in range(vp_num):
         meshes = meshing(volumes[i], rotates[i], translates[i])  # (B)
 
-        for b in range(volumes.size(0)):
+        for b in range(volumes[0].size(0)):
             batch_vp_meshes[b].append(meshes[b])
     return batch_vp_meshes
 
