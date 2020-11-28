@@ -127,10 +127,10 @@ def train(args):
 
             batch_vp_meshes = get_vp_meshes(volumes, rotates, translates)
             predict_meshes = compose_vp_meshes(batch_vp_meshes)
-            predict_points = gcn(predict_meshes, features)
+            predict_vertices = gcn(predict_meshes, features)
 
-            cd_loss = cd_loss_func(predict_points, points)
-            emd_loss = calculate_emd_loss(predict_points, points)
+            cd_loss = cd_loss_func(predict_vertices, points)
+            emd_loss = calculate_emd_loss(predict_vertices, points)
 
             total_loss = cd_loss + emd_loss
 
@@ -153,9 +153,9 @@ def train(args):
             for b in range(args.batch):
                 img = rgbs[b]
                 vp_meshes = batch_vp_meshes[b]
-                predict_vertices = predict_points[b]
+                vertices = predict_vertices[b]
                 save_name = os.path.join(dir_path, 'epoch%d-%d.png' % (epoch + 1, b))
-                Visualizer.render_refine_vp_meshes(img, vp_meshes, predict_vertices, save_name)
+                Visualizer.render_refine_vp_meshes(img, vp_meshes, vertices, save_name)
 
             torch.save(gcn.state_dict(), os.path.join(checkpoint_path, 'model_epoch%03d.pth' % (epoch + 1)))
 

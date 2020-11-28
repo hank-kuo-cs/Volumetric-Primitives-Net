@@ -5,7 +5,7 @@ from torch_geometric.nn import GCNConv, TAGConv, GraphUNet, BatchNorm
 
 
 class GCNModel(nn.Module):
-    def __init__(self, n_dim=3):
+    def __init__(self, n_dim=3, v_num=2048):
         super().__init__()
         conv = GCNConv
         self.relu = nn.ReLU()
@@ -17,6 +17,13 @@ class GCNModel(nn.Module):
 
         self.conv5 = conv(512, 64)
         self.conv6 = conv(64, 3)
+
+        self.fc = nn.Sequential(
+            nn.Linear(v_num, 1024),
+            nn.Linear(1024, 1024),
+            nn.Linear(1024, v_num),
+            nn.Tanh()
+        )
 
     def forward(self, meshes: list, img_features: torch.Tensor):
         # meshes: [TriangleMesh, ...]
@@ -35,8 +42,14 @@ class GCNModel(nn.Module):
 
         x = self.conv5(x, edge_indices, None)
         x = self.conv6(x, edge_indices, None)
+        x = self.relu(x)
 
-        return x
+        x = x.view(x.size(0), -1)
+
+        deformations = self.fc(x).view(x.size(0), -1, 3) * 0.1
+        predict_vertices = batch_vertices + deformations
+
+        return predict_vertices
 
     @staticmethod
     def get_edge_indices(mesh: TriangleMesh):
