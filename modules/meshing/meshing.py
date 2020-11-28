@@ -25,7 +25,7 @@ class Meshing:
         pass
 
     @staticmethod
-    def compose_meshes(meshes: list):
+    def compose_meshes(meshes: list) -> TriangleMesh:
         vertices = []
         faces = []
 

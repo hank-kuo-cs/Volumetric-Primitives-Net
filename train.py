@@ -140,7 +140,7 @@ def get_vp_meshes(volumes, rotates, translates):
     return batch_vp_meshes
 
 
-def compose_vp_meshes(batch_vp_meshes):
+def compose_vp_meshes(batch_vp_meshes) -> list:  # (N, K) -> (N)
     batch_meshes = []
     for b in range(len(batch_vp_meshes)):
         mesh = Meshing.compose_meshes(batch_vp_meshes[b])
@@ -237,7 +237,7 @@ def train(args):
             if AUGMENT_3D['point_mixup']:
                 rgbs, silhouettes, view_center_points = point_mixup_data(view_center_points)
 
-            volumes, rotates, translates = model(rgbs)
+            volumes, rotates, translates, features = model(rgbs)
 
             # Chamfer Distance Loss
             predict_points = sample_predict_points(volumes, rotates, translates)
@@ -321,7 +321,7 @@ def train_pointmixup(args):
             if AUGMENT_3D['rotate']:
                 points = rotate_points_forward_x_axis(points, angles)
 
-            volumes, rotates, translates = model(rgbs)
+            volumes, rotates, translates, features = model(rgbs)
 
             # Chamfer Distance Loss
             predict_points = sample_predict_points(volumes, rotates, translates)
@@ -363,6 +363,9 @@ def train_pointmixup(args):
                 Visualizer.render_vp_meshes(img, vp_meshes, save_name, dist=SHOW_DIST)
 
             torch.save(model.state_dict(), os.path.join(checkpoint_path, 'model_epoch%03d.pth' % (epoch_now + 1)))
+
+
+from modules.network import GCNModel
 
 
 def train_acdmix(args):
@@ -389,7 +392,7 @@ def train_acdmix(args):
             if AUGMENT_3D['rotate']:
                 points = rotate_points_forward_x_axis(points, angles)
 
-            volumes, rotates, translates = model(rgbs)
+            volumes, rotates, translates, features = model(rgbs)
 
             # Chamfer Distance Loss
             predict_points = sample_predict_points(volumes, rotates, translates)
@@ -431,6 +434,7 @@ def train_acdmix(args):
                 Visualizer.render_vp_meshes(img, vp_meshes, save_name, dist=SHOW_DIST)
 
             torch.save(model.state_dict(), os.path.join(checkpoint_path, 'model_epoch%03d.pth' % (epoch_now + 1)))
+
 
 
 if __name__ == '__main__':
