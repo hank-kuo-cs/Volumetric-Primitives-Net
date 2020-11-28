@@ -1,13 +1,19 @@
 import torch
 from kaolin.rep import TriangleMesh
-from .vp_mesh import visualize_vp_meshes_with_gif
+from .vp_mesh import visualize_vp_meshes_with_gif, visualize_refine_vp_meshes
 from .mesh import visualize_mesh_with_gif, visualize_mesh_with_3pose
 
 
 class Visualizer:
     @staticmethod
-    def render_vp_meshes(image: torch.Tensor, vp_meshes: list, save_name: str, dist: float = 2.0):
-        visualize_vp_meshes_with_gif(image, vp_meshes, save_name, dist=dist)
+    def render_vp_meshes(image: torch.Tensor, vp_meshes: list, save_name: str,
+                         dist: float = 2.0, is_three_elev: bool = False):
+        visualize_vp_meshes_with_gif(image, vp_meshes, save_name, dist=dist, is_three_elev=is_three_elev)
+
+    @staticmethod
+    def render_refine_vp_meshes(image: torch.Tensor, vp_meshes: list, predict_vertices: torch.Tensor, save_name: str):
+        visualize_refine_vp_meshes(image, vp_meshes, save_name, predict_vertices)
+
 
     @staticmethod
     def render_mesh_gif(image: torch.Tensor, mesh: TriangleMesh, save_name: str, dist: float):
