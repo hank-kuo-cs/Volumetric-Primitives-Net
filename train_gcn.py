@@ -139,15 +139,15 @@ def train(args):
             optimizer.step()
 
             n += 1
-            avg_losses['view_cd'] += cd_loss.item()
+            avg_losses['cd'] += cd_loss.item()
             avg_losses['emd'] += emd_loss.item()
 
             progress_bar.set_description('CD Loss = %.6f, EMD Loss = %.6f' % (cd_loss.item(), emd_loss.item()))
 
-        avg_losses['view_cd'] /= n
+        avg_losses['cd'] /= n
         avg_losses['emd'] /= n
         print('[Epoch %d AVG Loss] CD Loss = %.6f, EMD Loss = %.6f\n'
-              % (epoch + 1, avg_losses['view_cd'], avg_losses['emd']))
+              % (epoch + 1, avg_losses['cd'], avg_losses['emd']))
 
         if (epoch + 1) % 5 == 0:
             for b in range(args.batch):
