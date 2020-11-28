@@ -19,9 +19,9 @@ class GCNModel(nn.Module):
         self.conv6 = conv(64, 3)
 
         self.fc = nn.Sequential(
-            nn.Linear(v_num, 1024),
+            nn.Linear(v_num * 3, 1024),
             nn.Linear(1024, 1024),
-            nn.Linear(1024, v_num),
+            nn.Linear(1024, v_num * 3),
             nn.Tanh()
         )
 
