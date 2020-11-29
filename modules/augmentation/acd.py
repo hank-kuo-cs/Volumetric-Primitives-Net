@@ -103,7 +103,7 @@ def get_kaolinmesh_from_trimesh(tri_mesh, is_list=False):
 def merge_meshes(convex_hulls: list) -> TriangleMesh:
     # convex_hulls: [trimesh.TriMesh, ...]
     if isinstance(convex_hulls[0], TriangleMesh):
-        convex_hulls = get_kaolinmesh_from_trimesh(convex_hulls, is_list=True)
+        convex_hulls = get_trimesh_from_kaolinmesh(convex_hulls, is_list=True)
     mesh = trimesh.boolean.union(convex_hulls)
     mesh = get_kaolinmesh_from_trimesh(mesh)
     return mesh
