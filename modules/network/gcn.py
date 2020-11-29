@@ -5,11 +5,15 @@ from torch_geometric.nn import GCNConv, TAGConv, GraphUNet, BatchNorm
 
 
 class GCNModel(nn.Module):
-    def __init__(self, n_dim=3, v_num=2048):
+    def __init__(self, n_dim=3, img_feature_dim=512, v_num=2048, use_position_encoding=False):
         super().__init__()
         conv = GCNConv
+        self.use_position_encoding = use_position_encoding
         self.relu = nn.ReLU()
-        self.conv1 = conv(n_dim, 512)
+
+        n_dim = n_dim + n_dim * 12 if use_position_encoding else n_dim
+
+        self.conv1 = conv(n_dim + img_feature_dim, 512)
         self.conv2 = conv(512, 512)
 
         self.conv3 = conv(512, 512)
@@ -29,6 +33,9 @@ class GCNModel(nn.Module):
         # meshes: [TriangleMesh, ...]
         batch_vertices = self.get_batch_vertices(meshes)  # (B, N, 3)
         edge_indices = self.get_edge_indices(meshes[0])  # (2, K)
+
+        if self.use_position_encoding:
+            batch_vertices = self.positional_encoding(batch_vertices)
 
         x = torch.cat([batch_vertices, img_features[:, None, :].repeat(1, batch_vertices.size(1), 1)], 2)
 
@@ -60,3 +67,14 @@ class GCNModel(nn.Module):
     @staticmethod
     def get_batch_vertices(meshes: list):
         return torch.cat([mesh.vertices[None] for mesh in meshes])
+
+    @staticmethod
+    def positional_encoding(x: torch.Tensor):
+        encoding = [x]
+        frequency_bands = 2.0 ** torch.linspace(0, 5, 6, dtype=torch.float, device=x.device)
+
+        for freq in frequency_bands:
+            for func in [torch.sin, torch.cos]:
+                encoding.append(func(x * freq))
+
+        return torch.cat(encoding, dim=-1)

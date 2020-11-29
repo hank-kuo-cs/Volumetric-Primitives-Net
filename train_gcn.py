@@ -102,7 +102,7 @@ def train(args):
     vpn.load_state_dict(torch.load(args.vpn))
     vpn.eval()
 
-    gcn = GCNModel(3 + 512).cuda()
+    gcn = GCNModel(n_dim=3, img_feature_dim=512, v_num=2048, use_position_encoding=False).cuda()
     optimizer = Adam(params=gcn.parameters(), lr=args.lr, betas=(0.9, 0.99), weight_decay=args.w_decay)
 
     cd_loss_func = ChamferDistanceLoss()
