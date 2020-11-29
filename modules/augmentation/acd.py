@@ -80,6 +80,8 @@ def random_cutout(convex_hulls: list) -> list:
 def get_trimesh_from_kaolinmesh(kao_mesh, is_list=False):
     def one(kao_mesh):
         m = trimesh.Trimesh()
+        if kao_mesh.vertices.requires_grad:
+            kao_mesh.vertices = kao_mesh.vertices.detach()
         m.vertices = kao_mesh.vertices.cpu()
         m.faces = kao_mesh.faces.cpu()
         return m
