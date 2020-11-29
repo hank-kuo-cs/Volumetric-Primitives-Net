@@ -36,7 +36,7 @@ def concat_pil_image(imgs: list) -> Image:
 
 def phong_render(mesh: TriangleMesh, uv: torch.Tensor, texture: torch.Tensor,
                  dist: float, elev: float, azim: float):
-    rgb, _, _ = PhongRenderer.render(mesh, dist, elev, azim, uv, texture)
+    rgb, _, _ = PhongRenderer.render(mesh, dist, elev, azim, uv, texture, img_size=256)
 
     rgb = rgb[0].detach().cpu().permute(2, 0, 1)
 
