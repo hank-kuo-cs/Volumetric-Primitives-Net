@@ -77,6 +77,7 @@ def visualize_refine_vp_meshes(image: torch.Tensor, vp_meshes: list, save_name: 
     mesh.vertices = predict_vertices
 
     union_mesh = merge_meshes(vp_meshes)
+    union_mesh.cuda()
     single_colors = torch.full_like(union_mesh.vertices, fill_value=0.5)[None]
 
     vertices = mesh.vertices[None]
