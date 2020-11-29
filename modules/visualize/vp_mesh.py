@@ -75,13 +75,16 @@ def visualize_refine_vp_meshes(image: torch.Tensor, vp_meshes: list, save_name: 
     mesh, uv, texture = merge_meshes(vp_meshes)
     deformed_mesh = TriangleMesh.from_tensors(predict_vertices, mesh.faces)
 
+    tmp_uv = torch.rand(uv.size()).cuda()
+    tmp_texture = torch.full_like(texture, 0.5)
+
     gif_imgs = []
     render_img_direct_pose = phong_render(deformed_mesh, uv, texture, 1, 0, 0)
 
     for azim in range(0, 360, 30):
         predict_img = phong_render(deformed_mesh, uv, texture, 1, 0, azim)
         vp_img = phong_render(mesh, uv, texture, 1, 0, azim)
-        single_color_img = phong_render(deformed_mesh, None, None, 1, 0, azim)
+        single_color_img = phong_render(deformed_mesh, tmp_uv, tmp_texture, 1, 0, azim)
 
         imgs = [image, render_img_direct_pose, vp_img, predict_img, single_color_img]
         gif_imgs.append(concat_pil_image(imgs))
