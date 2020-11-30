@@ -159,21 +159,21 @@ def test(args):
         save_name = os.path.join(dir_path, 'epoch%d-%d.png' % (args.epoch, n // 10))
         Visualizer.render_refine_vp_meshes(img, vp_meshes, vertices, save_name)
 
-        avg_losses['cd'] /= n
-        avg_losses['emd'] /= n
-        print('\nEpoch %d\n============================' % args.epoch)
+    avg_losses['cd'] /= n
+    avg_losses['emd'] /= n
+    print('\nEpoch %d\n============================' % args.epoch)
 
-        for i in range(len(class_avg_losses)):
-            if class_n[i] == 0:
-                continue
-            class_avg_losses['cd'][i] /= class_n[i]
-            class_avg_losses['emd'][i] /= class_n[i]
+    for i in range(len(class_avg_losses)):
+        if class_n[i] == 0:
+            continue
+        class_avg_losses['cd'][i] /= class_n[i]
+        class_avg_losses['emd'][i] /= class_n[i]
 
-            print(class_names[i], 'cd loss = %.6f, emd loss = %.6f' %
-                  (class_avg_losses['cd'][i], class_avg_losses['emd'][i]))
+        print(class_names[i], 'cd loss = %.6f, emd loss = %.6f' %
+              (class_avg_losses['cd'][i], class_avg_losses['emd'][i]))
 
-        print('============================\ntotal cd loss = %.6f, emd loss = %.6f'
-              % (avg_losses['cd'], avg_losses['emd']))
+    print('============================\ntotal cd loss = %.6f, emd loss = %.6f'
+          % (avg_losses['cd'], avg_losses['emd']))
 
 
 if __name__ == '__main__':
