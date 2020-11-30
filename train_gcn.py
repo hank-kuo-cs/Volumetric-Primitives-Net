@@ -17,7 +17,7 @@ from modules.visualize import Visualizer
 TRAIN_CLASSES = ['airplane', 'car', 'chair']
 
 
-def set_seed(manual_seed=0):
+def set_seed(manual_seed=1234):
     random.seed(manual_seed)
     torch.manual_seed(manual_seed)
 
