@@ -163,7 +163,7 @@ def test(args):
     avg_losses['emd'] /= n
     print('\nEpoch %d\n============================' % args.epoch)
 
-    for i in range(len(class_avg_losses)):
+    for i in range(len(class_n)):
         if class_n[i] == 0:
             continue
         class_avg_losses['cd'][i] /= class_n[i]
