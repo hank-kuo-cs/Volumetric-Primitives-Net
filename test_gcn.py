@@ -175,3 +175,8 @@ def test(args):
         print('============================\ntotal cd loss = %.6f, emd loss = %.6f'
               % (avg_losses['cd'], avg_losses['emd']))
 
+
+if __name__ == '__main__':
+    args = parse_args()
+    set_seed()
+    test(args)
