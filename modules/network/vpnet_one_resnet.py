@@ -40,7 +40,7 @@ class VPNetOneRes(nn.Module):
 
         volumes = self.restrict_volumes(volumes)
 
-        return volumes, rotates, translates, perceptual_features
+        return volumes, rotates, translates, perceptual_features, features
 
     def extract_feature(self, imgs):
         out = self.resnet.conv1(imgs)

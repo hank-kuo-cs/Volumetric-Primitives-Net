@@ -123,11 +123,11 @@ def train(args):
             rgbs, points, angles = data['rgb'].cuda(), data['points'].cuda(), data['rotate_angle'].cuda()
             # points = rotate_points_forward_x_axis(points, angles)
 
-            volumes, rotates, translates, features = vpn(rgbs)
+            volumes, rotates, translates, perceptual_features, global_features = vpn(rgbs)
 
             batch_vp_meshes = get_vp_meshes(volumes, rotates, translates)
             predict_meshes = compose_vp_meshes(batch_vp_meshes)
-            predict_vertices = gcn(predict_meshes, features)
+            predict_vertices = gcn(predict_meshes, rgbs, perceptual_features, global_features)
 
             cd_loss = cd_loss_func(predict_vertices, points)
             emd_loss = calculate_emd_loss(predict_vertices, points)

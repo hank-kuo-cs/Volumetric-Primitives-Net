@@ -132,11 +132,11 @@ def test(args):
         gt_points = data['view_center_points'].cuda()
         class_indices = data['class_index']
 
-        volumes, rotates, translates, features = vpn(rgbs)
+        volumes, rotates, translates, perceptual_features, global_features = vpn(rgbs)
 
         batch_vp_meshes = get_vp_meshes(volumes, rotates, translates)
         predict_meshes = compose_vp_meshes(batch_vp_meshes)
-        predict_vertices = gcn(predict_meshes, features)
+        predict_vertices = gcn(predict_meshes, rgbs, perceptual_features, global_features)
 
         batch_cd_loss = calculate_cd_loss(predict_vertices, gt_points)
         batch_emd_loss = calculate_emd_loss(predict_vertices, gt_points)
@@ -161,7 +161,8 @@ def test(args):
 
     avg_losses['cd'] /= n
     avg_losses['emd'] /= n
-    print('\nEpoch %d\n============================' % args.epoch)
+    print('\nEpoch %d\n' % args.epoch)
+    print('=' * 30)
 
     for i in range(len(class_n)):
         if class_n[i] == 0:
@@ -169,10 +170,10 @@ def test(args):
         class_avg_losses['cd'][i] /= class_n[i]
         class_avg_losses['emd'][i] /= class_n[i]
 
-        print(class_names[i], 'cd loss = %.6f, emd loss = %.6f' %
+        print(class_names[i], '\tcd loss = %.6f, emd loss = %.6f' %
               (class_avg_losses['cd'][i], class_avg_losses['emd'][i]))
-
-    print('============================\ntotal cd loss = %.6f, emd loss = %.6f'
+    print('=' * 30)
+    print('total \tcd loss = %.6f, emd loss = %.6f'
           % (avg_losses['cd'], avg_losses['emd']))
 
 
