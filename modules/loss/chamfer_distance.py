@@ -22,8 +22,8 @@ class ChamferDistanceLoss(nn.Module):
         dist_min1, _ = torch.min(dist1, dim=2)
         dist_min2, _ = torch.min(dist2, dim=2)
 
-        loss1 = torch.sqrt(dist_min1.mean(1))
-        loss2 = torch.sqrt(dist_min2.mean(1))
+        loss1 = dist_min1.mean(1)
+        loss2 = dist_min2.mean(1)
 
         loss = w1 * loss1 + w2 * loss2
 
