@@ -48,7 +48,7 @@ class GenReDataset(Dataset):
                 self.rgb_paths += sorted(glob(os.path.join(obj_path, '*rgb.png')))
                 self.mask_paths += sorted(glob(os.path.join(obj_path, '*silhouette.png')))
                 self.obj_paths += sorted(glob(os.path.join(obj_path, '*.obj')))
-                self.class_indices += [Classes.get_class_index_by_id(class_id) * 20]
+                self.class_indices += [Classes.get_class_index_by_id(class_id) for i in range(20)]
 
     def _check_path_data(self):
         assert len(self.rgb_paths) == len(self.mask_paths) == len(self.obj_paths) == len(self.class_indices)
