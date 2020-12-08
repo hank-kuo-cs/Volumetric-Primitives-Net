@@ -146,7 +146,7 @@ def test(args):
         avg_losses['emd'] += batch_emd_loss.mean().item()
         n += 1
 
-        for b in range(args.batch):
+        for b in range(len(batch_cd_loss)):
             class_avg_losses['cd'][class_indices[b]] += batch_cd_loss[b].item()
             class_avg_losses['emd'][class_indices[b]] += batch_emd_loss[b].item()
             class_n[class_indices[b]] += 1
