@@ -66,4 +66,9 @@ class GenReDataset(Dataset):
     @staticmethod
     def _load_points(obj_path):
         mesh = TriangleMesh.from_obj(obj_path)
+        mesh.vertices -= torch.mean(mesh.vertices, 0)
+        mesh.vertices /= 128
+        mesh.vertices = mesh.vertices[:, [0, 2, 1]]
+        mesh.vertices[:, 0] *= -1
+        mesh.vertices /= 1.7
         return mesh.sample(2048)[0]
