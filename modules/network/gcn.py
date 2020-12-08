@@ -39,7 +39,7 @@ class GCNModel(nn.Module):
         global_features = global_features[:, None, :].repeat(1, x.size(1), 1)
         local_features = self.get_local_features(batch_vertices, rgbs, perceptual_features)
 
-        x = torch.cat([x, local_features], 2)
+        x = torch.cat([x, local_features, global_features], 2)
 
         x = self.conv1(x, edge_indices, None)
         x = self.conv2(x, edge_indices, None)
