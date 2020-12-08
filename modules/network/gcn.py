@@ -5,7 +5,7 @@ from torch_geometric.nn import GCNConv, TAGConv, GraphUNet, BatchNorm
 
 
 class GCNModel(nn.Module):
-    def __init__(self, n_dim=3, img_feature_dim=960, v_num=2048, use_position_encoding=True):
+    def __init__(self, n_dim=3, img_feature_dim=960 + 512, v_num=2048, use_position_encoding=True):
         super().__init__()
         conv = GCNConv
         self.use_position_encoding = use_position_encoding
