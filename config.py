@@ -43,6 +43,7 @@ EXPERIMENT_NAME = ''
 
 # Dataset
 DATASET_ROOT = '/eva_data/hdd1/hank'
+GENRE_TESTING_ROOT = '/eva_data/hdd1/hank/GenRe/test'
 LITTLE_NUM = {'train': 100, 'test': 20}
 AUGMENT_3D = {'rotate': False, 'cutmix': False, 'scale': False, 'point_mixup': False}
 IMG_SIZE = 128

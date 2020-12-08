@@ -5,9 +5,8 @@ import random
 import argparse
 from tqdm import tqdm
 from torch.utils.data import DataLoader
-from modules.dataset import Classes, ShapeNetDataset
+from modules.dataset import Classes, ShapeNetDataset, GenReDataset
 from modules.network import VPNetOneRes, GCNModel
-from modules.sampling import Sampling
 from modules.loss import ChamferDistanceLoss, EarthMoverDistanceLoss
 from modules.meshing import Meshing
 from modules.visualize import Visualizer
@@ -35,13 +34,15 @@ def parse_args():
     parser.add_argument('-e', '--epoch', type=int, default=50, help='Use which model train on this number of epochs')
     parser.add_argument('-vpn', type=str, help='Load a VP network to get initial vp prediction')
     parser.add_argument('-batch', type=int, default=8, help='Batch size')
+    parser.add_argument('-genre', action='store_true', help='Use GenRe testing dataset to test')
 
     return parser.parse_args()
 
 
 def load_dataset(args):
     print('Load dataset...')
-    test_dataset = ShapeNetDataset('test_unseen' if args.is_unseen else 'test_seen')
+    test_dataset = ShapeNetDataset('test_unseen' if args.is_unseen else 'test_seen') \
+        if not args.genre else GenReDataset()
     test_dataloader = DataLoader(dataset=test_dataset, batch_size=args.batch, shuffle=False, num_workers=16)
     print('Dataset size =', len(test_dataset))
 
@@ -170,10 +171,10 @@ def test(args):
         class_avg_losses['cd'][i] /= class_n[i]
         class_avg_losses['emd'][i] /= class_n[i]
 
-        print(class_names[i], '\tcd loss = %.6f, emd loss = %.6f' %
+        print(class_names[i], '\t\tcd loss = %.6f, emd loss = %.6f' %
               (class_avg_losses['cd'][i], class_avg_losses['emd'][i]))
     print('=' * 30)
-    print('total \tcd loss = %.6f, emd loss = %.6f'
+    print('total \t\tcd loss = %.6f, emd loss = %.6f'
           % (avg_losses['cd'], avg_losses['emd']))
 
 

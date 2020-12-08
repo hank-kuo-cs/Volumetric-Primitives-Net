@@ -10,7 +10,6 @@ from modules.loss import ChamferDistanceLoss, EarthMoverDistanceLoss
 from modules.dataset import ACDMixDataset
 from modules.sampling import Sampling
 from modules.meshing import Meshing
-from modules.transform import rotate_points_forward_x_axis
 from modules.visualize import Visualizer
 
 
@@ -102,7 +101,7 @@ def train(args):
     vpn.load_state_dict(torch.load(args.vpn))
     vpn.eval()
 
-    gcn = GCNModel(n_dim=3, img_feature_dim=512, v_num=2048, use_position_encoding=False).cuda()
+    gcn = GCNModel().cuda()
     optimizer = Adam(params=gcn.parameters(), lr=args.lr, betas=(0.9, 0.99), weight_decay=args.w_decay)
 
     cd_loss_func = ChamferDistanceLoss()
