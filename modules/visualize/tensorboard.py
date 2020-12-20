@@ -5,8 +5,8 @@ from config import TENSORBOARD_PATH, EXPERIMENT_NAME
 
 
 class TensorboardWriter:
-    def __init__(self):
-        writer_path = os.path.join(TENSORBOARD_PATH, EXPERIMENT_NAME)
+    def __init__(self, tensorboard_path=TENSORBOARD_PATH, experiment_name=EXPERIMENT_NAME):
+        writer_path = os.path.join(tensorboard_path, experiment_name)
         self.writer = SummaryWriter(writer_path)
 
     def add_scalar(self, tag: str, x: int, y: float):

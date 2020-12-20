@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-from config import CD_W1, CD_W2, BATCH_SIZE
+from config import CD_W1, CD_W2
 
 
 class ChamferDistanceLoss(nn.Module):
@@ -16,6 +16,9 @@ class ChamferDistanceLoss(nn.Module):
         dist1 = dist
         dist2 = torch.transpose(dist, 1, 2)
 
+        dist1 = torch.sqrt(dist1)
+        dist2 = torch.sqrt(dist2)
+
         dist_min1, _ = torch.min(dist1, dim=2)
         dist_min2, _ = torch.min(dist2, dim=2)
 
@@ -29,5 +32,4 @@ class ChamferDistanceLoss(nn.Module):
     @staticmethod
     def check_parameters(points: torch.Tensor):
         assert points.ndimension() == 3  # (B, N, 3)
-        assert points.size(0) == BATCH_SIZE
         assert points.size(-1) == 3

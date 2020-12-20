@@ -26,7 +26,7 @@ class VPNetOneRes(nn.Module):
         self.translate_fc = self._make_linear(3 * self._vp_num)
 
     def forward(self, imgs):
-        features = self.extract_feature(imgs)
+        features, perceptual_features = self.extract_feature(imgs)
 
         volumes = self.volume_fc(features)
         rotates = self.rotate_fc(features)
@@ -40,7 +40,7 @@ class VPNetOneRes(nn.Module):
 
         volumes = self.restrict_volumes(volumes)
 
-        return volumes, rotates, translates
+        return volumes, rotates, translates, perceptual_features, features
 
     def extract_feature(self, imgs):
         out = self.resnet.conv1(imgs)
@@ -48,15 +48,16 @@ class VPNetOneRes(nn.Module):
         out = self.resnet.relu(out)
         out = self.resnet.maxpool(out)
 
-        out = self.resnet.layer1(out)
-        out = self.resnet.layer2(out)
-        out = self.resnet.layer3(out)
-        out = self.resnet.layer4(out)
+        l1_out = self.resnet.layer1(out)
+        l2_out = self.resnet.layer2(l1_out)
+        l3_out = self.resnet.layer3(l2_out)
+        l4_out = self.resnet.layer4(l3_out)
 
-        out = self.avgpool(out)
+        out = self.avgpool(l4_out)
         features = out.view(out.size(0), -1)
+        perceptual_features = [l1_out, l2_out, l3_out, l4_out]
 
-        return features
+        return features, perceptual_features
 
     def fix_volume_weight(self):
         # for p in self.resnet.parameters():

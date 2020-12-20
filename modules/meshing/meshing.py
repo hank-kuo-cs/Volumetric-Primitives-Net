@@ -25,17 +25,20 @@ class Meshing:
         pass
 
     @staticmethod
-    def compose_meshes(meshes: list):
+    def compose_meshes(meshes: list) -> TriangleMesh:
         vertices = []
         faces = []
 
+        vertices_num = 0
+
         for i, mesh in enumerate(meshes):
-            last_vertices_num = meshes[i - 1].vertices.size(0) if i != 0 else 0
             vertices_now = mesh.vertices.clone()
             faces_now = mesh.faces.clone()
 
             vertices.append(vertices_now)
-            faces.append(faces_now + last_vertices_num)
+            faces.append(faces_now + vertices_num)
+
+            vertices_num += vertices_now.size(0)
 
         result_mesh = TriangleMesh.from_tensors(vertices=torch.cat(vertices), faces=torch.cat(faces))
         result_mesh.to(DEVICE)

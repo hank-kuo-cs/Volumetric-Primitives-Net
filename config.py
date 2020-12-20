@@ -14,7 +14,7 @@ L_VIEW_CD = 1.0
 L_CAN_CD = 0.0
 L_SIL = 0.0
 L_VP_DIV = 0.1
-L_EMD = 0.0
+L_EMD = 1.0
 
 # Network
 MANUAL_SEED = 1234
@@ -30,8 +30,8 @@ IS_DECAY_VOLUME_RES = False
 DECAY_VOLUME_RES_RATE = 0.1
 
 # Volumetric Primitives
-CUBOID_NUM = 8
-SPHERE_NUM = 8
+CUBOID_NUM = 0
+SPHERE_NUM = 16
 CONE_NUM = 0
 VP_NUM = CUBOID_NUM + SPHERE_NUM + CONE_NUM
 
@@ -43,7 +43,8 @@ EXPERIMENT_NAME = ''
 
 # Dataset
 DATASET_ROOT = '/eva_data/hdd1/hank'
-LITTLE_NUM = {'train': 100, 'test': 20}
+GENRE_TESTING_ROOT = '/eva_data/hdd1/hank/GenRe/test'
+LITTLE_NUM = {'train': 1000, 'test': 200}
 AUGMENT_3D = {'rotate': False, 'cutmix': False, 'scale': False, 'point_mixup': False}
 IMG_SIZE = 128
 IS_VIEW_CENTER = True

@@ -4,7 +4,6 @@ from kaolin.graphics import DIBRenderer
 from config import DEVICE
 
 
-renderer = DIBRenderer(128, 128, mode='Phong')
 material = torch.tensor([[[0.7, 0.7, 0.7], [0.9, 0.9, 0.9], [0.3, 0.3, 0.3]]], dtype=torch.float).to(DEVICE)
 light = torch.tensor([[0, 10, -10]], dtype=torch.float).to(DEVICE)
 shininess = torch.tensor([1], dtype=torch.float).to(DEVICE)
@@ -15,7 +14,9 @@ class PhongRenderer:
         pass
 
     @classmethod
-    def render(cls, mesh: TriangleMesh, dist, elev, azim, uv=None, texture=None):
+    def render(cls, mesh: TriangleMesh, dist, elev, azim, uv=None, texture=None, img_size=128):
+        renderer = DIBRenderer(img_size, img_size, mode='Phong')
+
         cls.check_mesh_parameters(mesh, uv, texture)
         dist, elev, azim = cls.check_camera_parameters(dist, elev, azim)
 
@@ -24,7 +25,9 @@ class PhongRenderer:
         vertices = mesh.vertices.clone().to(DEVICE)[None]
         faces = mesh.faces.clone().to(DEVICE)
 
-        uv, texture = cls.get_random_color(vertices.size(1)) if uv is None and texture is None else uv, texture
+        if uv is None and texture is None:
+            rand_color = cls.get_random_color(vertices.size(1))
+            uv, texture = rand_color[0], rand_color[1]
 
         render_imgs, render_alphas, face_norms = renderer.forward(points=[vertices, faces],
                                                                   uv_bxpx2=uv,

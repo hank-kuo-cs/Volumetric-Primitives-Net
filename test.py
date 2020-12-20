@@ -65,6 +65,7 @@ def set_save_path(is_unseen=False):
     return dir_path
 
 
+@torch.no_grad()
 def test(args):
     epoch = args.epoch
     is_unseen = args.is_unseen
@@ -89,7 +90,7 @@ def test(args):
         class_indices = data['class_index']
         # dists, elevs, azims = data['dist'].float().to(DEVICE), data['elev'].float().to(DEVICE), data['azim'].float().to(DEVICE)
 
-        volumes, rotates, translates = model(rgbs)
+        volumes, rotates, translates, features = model(rgbs)
         predict_points = []
 
         for i in range(vp_num):

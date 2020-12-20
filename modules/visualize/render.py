@@ -2,6 +2,8 @@ import torch
 from PIL import Image
 from torchvision.transforms import transforms
 from kaolin.graphics.DIBRenderer import DIBRenderer
+from kaolin.rep import TriangleMesh
+from ..render import PhongRenderer
 
 
 renderer = DIBRenderer(256, 256)
@@ -30,6 +32,16 @@ def concat_pil_image(imgs: list) -> Image:
         result.paste(img, (i * w, 0))
 
     return result
+
+
+def phong_render(mesh: TriangleMesh, uv: torch.Tensor, texture: torch.Tensor,
+                 dist: float, elev: float, azim: float):
+    rgb, _, _ = PhongRenderer.render(mesh, dist, elev, azim, uv, texture, img_size=256)
+
+    rgb = rgb[0].detach().cpu().permute(2, 0, 1)
+
+    pil_img = to_pil(rgb)
+    return pil_img
 
 
 

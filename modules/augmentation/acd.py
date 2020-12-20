@@ -80,6 +80,8 @@ def random_cutout(convex_hulls: list) -> list:
 def get_trimesh_from_kaolinmesh(kao_mesh, is_list=False):
     def one(kao_mesh):
         m = trimesh.Trimesh()
+        if kao_mesh.vertices.requires_grad:
+            kao_mesh.vertices = kao_mesh.vertices.detach()
         m.vertices = kao_mesh.vertices.cpu()
         m.faces = kao_mesh.faces.cpu()
         return m
@@ -101,6 +103,9 @@ def get_kaolinmesh_from_trimesh(tri_mesh, is_list=False):
 
 
 def merge_meshes(convex_hulls: list) -> TriangleMesh:
+    # convex_hulls: [trimesh.TriMesh, ...]
+    if isinstance(convex_hulls[0], TriangleMesh):
+        convex_hulls = get_trimesh_from_kaolinmesh(convex_hulls, is_list=True)
     mesh = trimesh.boolean.union(convex_hulls)
     mesh = get_kaolinmesh_from_trimesh(mesh)
     return mesh
