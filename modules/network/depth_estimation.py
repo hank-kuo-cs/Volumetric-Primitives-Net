@@ -38,26 +38,21 @@ class DepthEstimationNet(nn.Module):
         self.encoder_out = None
 
         # Decoder
-        self.decoders = {}
-
-        for out_plane, layer_name in zip(out_planes, layer_names):
-            module_list = list()
-            reverse_resnet = reverse_u_resnet18(out_planes=out_plane)
-            module_list.append(reverse_resnet.layer1)
-            module_list.append(reverse_resnet.layer2)
-            module_list.append(reverse_resnet.layer3)
-            module_list.append(reverse_resnet.layer4)
-            module_list.append(
-                nn.Sequential(
-                    reverse_resnet.deconv1,
-                    reverse_resnet.bn1,
-                    reverse_resnet.relu,
-                    reverse_resnet.deconv2
-                )
+        module_list = list()
+        reverse_resnet = reverse_u_resnet18(out_planes=1)
+        module_list.append(reverse_resnet.layer1)
+        module_list.append(reverse_resnet.layer2)
+        module_list.append(reverse_resnet.layer3)
+        module_list.append(reverse_resnet.layer4)
+        module_list.append(
+            nn.Sequential(
+                reverse_resnet.deconv1,
+                reverse_resnet.bn1,
+                reverse_resnet.relu,
+                reverse_resnet.deconv2
             )
-            module_list = nn.ModuleList(module_list)
-            setattr(self, 'decoder_' + layer_name, module_list)
-            self.decoders[layer_name] = module_list
+        )
+        self.decoder = nn.ModuleList(module_list)
 
     def forward(self, x):
         # Encode
@@ -69,15 +64,11 @@ class DepthEstimationNet(nn.Module):
         self.encoder_out = feat_maps[-1]
 
         # Decode
-        outputs = {}
-        for layer_name, decoder in self.decoders.items():
-            x = feat_maps[-1]
-            for idx, f in enumerate(decoder):
-                x = f(x)
-                if idx < len(decoder) - 1:
-                    feat_map = feat_maps[-(idx + 2)]
-                    assert feat_map.shape[2:4] == x.shape[2:4]
-                    x = torch.cat((x, feat_map), dim=1)
-            outputs[layer_name] = x
+        x = feat_maps[-1]
+        for idx, f in enumerate(self.decoder):
+            x = f(x)
+            if idx < len(self.decoder) - 1:
+                feat_map = feat_maps[-(idx + 2)]
+                assert feat_map.shape[2:4] == x.shape[2:4]
+                x = torch.cat((x, feat_map), dim=1)
 
-        return outputs
