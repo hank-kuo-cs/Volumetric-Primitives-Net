@@ -91,7 +91,7 @@ def train():
     dir_path, checkpoint_path = set_file_path()
 
     model = SDNet().to(DEVICE)
-    optimizer = Adam(params=model.parameters(), lr=LR, betas=(0.9, 0.99), weight_decay=W_DECAY)
+    optimizer = Adam(params=model.parameters(), lr=LR_VPN, betas=(0.9, 0.99), weight_decay=W_DECAY)
 
     cd_loss_func = ChamferDistanceLoss()
     silhouette_loss_func = SilhouetteLoss()

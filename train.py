@@ -88,28 +88,31 @@ def load_model(pretrain_vpn_path: str, pretrain_den_path: str):
     return vpn
 
 
-def load_optimizer(model):
+def load_optimizer(vpn, den):
     if not IS_DECAY_VOLUME_RES:
-        return Adam(params=model.parameters(), lr=LR, betas=(0.9, 0.99), weight_decay=W_DECAY)
+        return Adam(params=[
+            {'params': vpn.parameters(), 'lr': LR_VPN},
+            {'params': den.parameters(), 'lr': LR_DEN}
+        ], betas=(0.5, 0.9))
 
     print('Optimizer use different lr...')
 
     if BACKBONE == 'vpnet_oneres':
         return Adam(params=[
-            {'params': model.rotate_fc.parameters(), 'lr': LR},
-            {'params': model.translate_fc.parameters(), 'lr': LR},
-            {'params': model.resnet.parameters(), 'lr': LR * DECAY_VOLUME_RES_RATE},
-            {'params': model.volume_fc.parameters(), 'lr': LR * DECAY_VOLUME_RES_RATE},
+            {'params': vpn.rotate_fc.parameters(), 'lr': LR_VPN},
+            {'params': vpn.translate_fc.parameters(), 'lr': LR_VPN},
+            {'params': vpn.resnet.parameters(), 'lr': LR_VPN * DECAY_VOLUME_RES_RATE},
+            {'params': vpn.volume_fc.parameters(), 'lr': LR_VPN * DECAY_VOLUME_RES_RATE},
         ], betas=(0.9, 0.99), weight_decay=W_DECAY)
 
     elif BACKBONE == 'vpnet_twores':
         return Adam(params=[
-            {'params': model.transform_resnet.parameters(), 'lr': LR},
-            {'params': model.rotate_fc.parameters(), 'lr': LR},
-            {'params': model.translate_fc.parameters(), 'lr': LR},
-            {'params': model.volume_resnet.parameters(), 'lr': LR * DECAY_VOLUME_RES_RATE},
-            {'params': model.volume_fc.parameters(), 'lr': LR * DECAY_VOLUME_RES_RATE},
-        ], lr=LR, betas=(0.9, 0.99), weight_decay=W_DECAY)
+            {'params': vpn.transform_resnet.parameters(), 'lr': LR_VPN},
+            {'params': vpn.rotate_fc.parameters(), 'lr': LR_VPN},
+            {'params': vpn.translate_fc.parameters(), 'lr': LR_VPN},
+            {'params': vpn.volume_resnet.parameters(), 'lr': LR_VPN * DECAY_VOLUME_RES_RATE},
+            {'params': vpn.volume_fc.parameters(), 'lr': LR_VPN * DECAY_VOLUME_RES_RATE},
+        ], lr=LR_VPN, betas=(0.9, 0.99), weight_decay=W_DECAY)
 
 
 def sample_predict_points(volumes, rotates, translates):
@@ -216,6 +219,8 @@ def show_loss_on_tensorboard(epoch, avg_losses):
         tensorboard_writer.add_scalar('train/vp_diverse_loss', epoch, avg_losses['vp_div'])
     if L_EMD:
         tensorboard_writer.add_scalar('train/emd_loss', epoch, avg_losses['emd'])
+    if L_DEPTH:
+        tensorboard_writer.add_scalar('train/depth_loss', epoch, avg_losses['depth'])
 
 
 def train(args):
@@ -381,7 +386,7 @@ def train_acdmix(args):
     dir_path, checkpoint_path = set_file_path()
 
     vpn, den = load_model(args.pre_vpn, args.pre_den)
-    optimizer = load_optimizer(vpn)
+    optimizer = load_optimizer(vpn, den)
 
     cd_loss_func = ChamferDistanceLoss()
     l1_loss_func = L1Loss()

@@ -3,7 +3,8 @@ DEVICE = 'cuda'
 DEVICE_NUM = ''
 
 # Hyper parameter
-LR = 1e-4
+LR_DEN = 1e-3
+LR_VPN = 1e-4
 W_DECAY = 1e-6
 SAMPLE_NUM = 128
 BATCH_SIZE = 8
@@ -15,6 +16,7 @@ L_CAN_CD = 0.0
 L_SIL = 0.0
 L_VP_DIV = 0.1
 L_EMD = 1.0
+L_DEPTH = 1
 
 # Network
 MANUAL_SEED = 1234
