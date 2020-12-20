@@ -50,10 +50,12 @@ def set_file_path():
 
     dir_path = os.path.join(EXPERIMENT_PATH, 'train', classes_str)
     checkpoint_path = os.path.join(EXPERIMENT_PATH, 'checkpoint')
+    depth_checkpoint_path = os.path.join(checkpoint_path, 'depth')
     os.makedirs(dir_path, exist_ok=True)
     os.makedirs(checkpoint_path, exist_ok=True)
+    os.makedirs(depth_checkpoint_path, exist_ok=True)
 
-    return dir_path, checkpoint_path
+    return dir_path, checkpoint_path, depth_checkpoint_path
 
 
 def load_dataset(point_mixup_dataset_name=''):
@@ -383,7 +385,7 @@ def train_pointmixup(args):
 def train_acdmix(args):
     train_dataset = ACDMixDataset(args.acd_mix)
     train_dataloader = DataLoader(dataset=train_dataset, batch_size=BATCH_SIZE, shuffle=True, num_workers=16)
-    dir_path, checkpoint_path = set_file_path()
+    dir_path, checkpoint_path, depth_checkpoint_path = set_file_path()
 
     vpn, den = load_model(args.pretrain_vpn, args.pretrain_den)
     optimizer = load_optimizer(vpn, den)
@@ -455,6 +457,7 @@ def train_acdmix(args):
                 Visualizer.render_vp_meshes(img, vp_meshes, save_name, dist=SHOW_DIST)
 
             torch.save(vpn.state_dict(), os.path.join(checkpoint_path, 'model_epoch%03d.pth' % (epoch_now + 1)))
+            torch.save(den.state_dict(), os.path.join(depth_checkpoint_path, 'model_epoch%03d.pth' % (epoch_now + 1)))
 
 
 if __name__ == '__main__':
