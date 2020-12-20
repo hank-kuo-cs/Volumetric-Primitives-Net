@@ -72,3 +72,4 @@ class DepthEstimationNet(nn.Module):
                 assert feat_map.shape[2:4] == x.shape[2:4]
                 x = torch.cat((x, feat_map), dim=1)
 
+        return x
