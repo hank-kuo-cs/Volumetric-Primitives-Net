@@ -5,7 +5,11 @@ import torch
 import argparse
 from tqdm import tqdm
 from torch.utils.data import DataLoader
-from modules import VPNetOneRes, VPNetTwoRes, Sampling, ChamferDistanceLoss, Meshing, Visualizer
+from modules.network import VPNetOneRes, VPNetTwoRes
+from modules.sampling import Sampling
+from modules.loss import ChamferDistanceLoss
+from modules.meshing import Meshing
+from modules.visualize import Visualizer
 from modules.dataset import Classes, ShapeNetDataset
 from config import *
 

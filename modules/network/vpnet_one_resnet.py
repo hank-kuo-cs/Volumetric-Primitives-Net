@@ -18,6 +18,7 @@ class VPNetOneRes(nn.Module):
         super().__init__()
         self._vp_num = CUBOID_NUM + SPHERE_NUM + CONE_NUM
 
+        self.conv1 = nn.Conv2d(1, 3, 1, 1)
         self.resnet = resnet18(pretrained=True)
         self.avgpool = nn.AdaptiveAvgPool2d(output_size=(1, 1))
 
@@ -25,8 +26,9 @@ class VPNetOneRes(nn.Module):
         self.rotate_fc = self._make_linear(4 * self._vp_num)
         self.translate_fc = self._make_linear(3 * self._vp_num)
 
-    def forward(self, imgs):
-        features, perceptual_features = self.extract_feature(imgs)
+    def forward(self, x):
+        x = self.conv1(x)
+        features, perceptual_features = self.extract_feature(x)
 
         volumes = self.volume_fc(features)
         rotates = self.rotate_fc(features)

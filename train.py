@@ -5,8 +5,9 @@ import argparse
 from tqdm import tqdm
 from torch.utils.data import DataLoader
 from torch.optim import Adam
+from torch.nn import L1Loss, MSELoss
 
-from modules.network import VPNetOneRes, VPNetTwoRes
+from modules.network import VPNetOneRes, VPNetTwoRes, DepthEstimationNet
 from modules.dataset import ShapeNetDataset, PointMixUpDataset, ACDMixDataset
 from modules.meshing import Meshing
 from modules.sampling import Sampling
@@ -14,6 +15,7 @@ from modules.loss import ChamferDistanceLoss, SilhouetteLoss, VPDiverseLoss, Ear
 from modules.visualize import Visualizer, TensorboardWriter
 from modules.transform import view_to_obj_points, rotate_points_forward_x_axis
 from modules.augmentation import cut_mix_data, point_mixup_data
+from modules.render import DepthRenderer
 from config import *
 
 
@@ -33,7 +35,8 @@ def set_seed(manual_seed=MANUAL_SEED):
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('-pre', '--pretrain_model', type=str, help='Load a pretrained model to continue training')
+    parser.add_argument('-pre_vpn', '--pretrain_vpn', type=str, help='Load a pretrained model to continue training')
+    parser.add_argument('-pre_den', '--pretrain_den', type=str, help='Load a pretrained model to continue training')
     parser.add_argument('-p_mix', '--point_mixup', type=str, help='Use point mixup dataset to train')
     parser.add_argument('-a_mix', '--acd_mix', type=str, help='Use acd mix dataset to train')
 
@@ -63,19 +66,26 @@ def load_dataset(point_mixup_dataset_name=''):
     return train_dataloader
 
 
-def load_model(pretrain_model_path: str):
-    model = VPNetOneRes() if BACKBONE == 'vpnet_oneres' else VPNetTwoRes()
-    model = model.to(DEVICE)
+def load_model(pretrain_vpn_path: str, pretrain_den_path: str):
+    vpn = VPNetOneRes() if BACKBONE == 'vpnet_oneres' else VPNetTwoRes()
+    vpn = vpn.to(DEVICE)
 
-    if pretrain_model_path:
-        print('Load pretrianed model:', pretrain_model_path)
-        model.load_state_dict(torch.load(pretrain_model_path))
+    den = DepthEstimationNet()
+    den = den.to(DEVICE)
+
+    if pretrain_vpn_path:
+        print('Load pretrained volumetric primitve model:', pretrain_vpn_path)
+        vpn.load_state_dict(torch.load(pretrain_vpn_path))
+
+    if pretrain_den_path:
+        print('Load pretrained depth estimation model:')
+        den.load_state_dict(torch.load(pretrain_den_path))
 
     if IS_FIX_VOLUME:
         print('Fix volume weight...')
-        model.fix_volume_weight()
+        vpn.fix_volume_weight()
 
-    return model
+    return vpn
 
 
 def load_optimizer(model):
@@ -365,43 +375,47 @@ def train_pointmixup(args):
             torch.save(model.state_dict(), os.path.join(checkpoint_path, 'model_epoch%03d.pth' % (epoch_now + 1)))
 
 
-from modules.network import GCNModel
-
-
 def train_acdmix(args):
     train_dataset = ACDMixDataset(args.acd_mix)
     train_dataloader = DataLoader(dataset=train_dataset, batch_size=BATCH_SIZE, shuffle=True, num_workers=16)
     dir_path, checkpoint_path = set_file_path()
-    model = load_model(args.pretrain_model)
-    optimizer = load_optimizer(model)
+
+    vpn, den = load_model(args.pre_vpn, args.pre_den)
+    optimizer = load_optimizer(vpn)
 
     cd_loss_func = ChamferDistanceLoss()
+    l1_loss_func = L1Loss()
 
     # Training Process
     for epoch_now in range(EPOCH_NUM):
-        model.train()
-        avg_losses = {'view_cd': 0.0, 'vp_div': 0.0, 'emd': 0.0}
+        vpn.train()
+        avg_losses = {'view_cd': 0.0, 'vp_div': 0.0, 'emd': 0.0, 'depth': 0.0}
         n = 0
 
         progress_bar = tqdm(train_dataloader)
 
         for data in progress_bar:
-            rgbs, silhouettes = data['rgb'].to(DEVICE), data['silhouette'].to(DEVICE)
+            # Load data
+            rgbs, silhouettes, depths = data['rgb'].to(DEVICE), data['silhouette'].to(DEVICE), data['depth'].to(DEVICE)
             points, angles = data['points'].to(DEVICE), data['rotate_angle'].float().to(DEVICE)
 
             if AUGMENT_3D['rotate']:
                 points = rotate_points_forward_x_axis(points, angles)
 
-            volumes, rotates, translates, features = model(rgbs)
+            # Predict
+            predict_depths = den(rgbs)
+            volumes, rotates, translates, features = vpn(predict_depths)
 
-            # Chamfer Distance Loss
+            # Loss
             predict_points = sample_predict_points(volumes, rotates, translates)
 
             cd_loss = cd_loss_func(predict_points, points) * L_VIEW_CD
             vp_div_loss = calculate_vp_div_loss(translates, points) * L_VP_DIV
             emd_loss = calculate_emd_loss(predict_points, points) * L_EMD
 
-            total_loss = cd_loss + vp_div_loss + emd_loss
+            depth_loss = l1_loss_func(predict_depths, depths)
+
+            total_loss = cd_loss + vp_div_loss + emd_loss + depth_loss
 
             optimizer.zero_grad()
             total_loss.backward()
@@ -411,16 +425,18 @@ def train_acdmix(args):
             avg_losses['view_cd'] += cd_loss.item()
             avg_losses['vp_div'] += vp_div_loss.item()
             avg_losses['emd'] += emd_loss.item()
+            avg_losses['depth'] += depth_loss.item()
 
-            progress_bar.set_description('CD Loss = %.6f, VP Div Loss = %.6f, EMD Loss = %.6f'
-                                         % (cd_loss.item(), vp_div_loss.item(), emd_loss.item()))
+            progress_bar.set_description('CD Loss = %.6f, VP Div Loss = %.6f, EMD Loss = %.6f, Depth Loss = %.6f'
+                                         % (cd_loss.item(), vp_div_loss.item(), emd_loss.item(), depth_loss.item()))
 
         avg_losses['view_cd'] /= n
         avg_losses['vp_div'] /= n
         avg_losses['emd'] /= n
+        avg_losses['depth'] /= n
 
-        print('[Epoch %d AVG Loss] CD Loss = %.6f, VP Div Loss = %.6f, EMD Loss = %.6f\n'
-              % (epoch_now + 1, avg_losses['view_cd'], avg_losses['vp_div'], avg_losses['emd']))
+        print('[Epoch %d AVG Loss] CD Loss = %.6f, VP Div Loss = %.6f, EMD Loss = %.6f, Depth Loss = %.6f\n'
+              % (epoch_now + 1, avg_losses['view_cd'], avg_losses['vp_div'], avg_losses['emd'], avg_losses['depth']))
         show_loss_on_tensorboard(epoch_now + 1, avg_losses)
 
         batch_vp_meshes = get_vp_meshes(volumes, rotates, translates)
@@ -433,8 +449,7 @@ def train_acdmix(args):
                 save_name = os.path.join(dir_path, 'epoch%d-%d.png' % (epoch_now + 1, b))
                 Visualizer.render_vp_meshes(img, vp_meshes, save_name, dist=SHOW_DIST)
 
-            torch.save(model.state_dict(), os.path.join(checkpoint_path, 'model_epoch%03d.pth' % (epoch_now + 1)))
-
+            torch.save(vpn.state_dict(), os.path.join(checkpoint_path, 'model_epoch%03d.pth' % (epoch_now + 1)))
 
 
 if __name__ == '__main__':

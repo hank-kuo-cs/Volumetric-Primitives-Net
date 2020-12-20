@@ -5,7 +5,10 @@ import torch
 from tqdm import tqdm
 from kaolin.rep import TriangleMesh
 from torch.utils.data import DataLoader
-from modules import SDNet, ShapeNetDataset, ChamferDistanceLoss, Visualizer, SilhouetteLoss
+from modules.dataset import ShapeNetDataset
+from modules.network import SDNet
+from modules.loss import ChamferDistanceLoss, SilhouetteLoss
+from modules.visualize import Visualizer
 from config import *
 
 

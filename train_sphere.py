@@ -5,7 +5,9 @@ from tqdm import tqdm
 from kaolin.rep import TriangleMesh
 from torch.utils.data import DataLoader
 from torch.optim import Adam
-from modules import SDNet, ShapeNetDataset, ChamferDistanceLoss, SilhouetteLoss
+from modules.dataset import ShapeNetDataset
+from modules.network import SDNet
+from modules.loss import ChamferDistanceLoss, SilhouetteLoss
 from modules.visualize import TensorboardWriter, Visualizer
 from modules.transform import rotate_points_forward_x_axis
 from modules.augmentation import cut_mix_data

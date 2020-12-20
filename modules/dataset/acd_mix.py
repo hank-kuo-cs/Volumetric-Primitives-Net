@@ -5,6 +5,7 @@ from glob import glob
 from PIL import Image
 from torch.utils.data import Dataset
 from torchvision.transforms import transforms
+from ..render import DepthRenderer
 from kaolin.rep import TriangleMesh
 from config import *
 
@@ -29,13 +30,18 @@ class ACDMixDataset(Dataset):
 
     def __getitem__(self, item):
         rgb, silhouette, angle = self.load_img(self.image_paths[item])
-        points = self.load_points(self.obj_paths[item])
+
+        mesh = self.load_mesh(self.obj_paths[item])
+        points = self.sample_points(mesh)
+        depth = DepthRenderer.render_depth(mesh)
+
         dist, elev, azim = self.load_meta(self.meta_paths[item])
         return {
             'rgb': rgb,
             'silhouette': silhouette,
             'points': points,
             'rotate_angle': angle,
+            'depth': depth,
             'dist': dist,
             'elev': elev,
             'azim': azim
@@ -68,9 +74,12 @@ class ACDMixDataset(Dataset):
         return rotate_transform(img), angle.item()
 
     @staticmethod
-    def load_points(obj_path: str):
-        mesh = TriangleMesh.from_obj(obj_path)
-        return mesh.sample(2048)[0]
+    def load_mesh(obj_path: str):
+        return TriangleMesh.from_obj(obj_path)
+
+    @staticmethod
+    def sample_points(mesh: TriangleMesh, num: int = 2048):
+        return mesh.sample(num)[0]
 
     @staticmethod
     def load_meta(meta_path: str):
