@@ -13,7 +13,7 @@ class DepthEstimationNet(nn.Module):
     Used for RGB to 2.5D maps
     """
 
-    def __init__(self, out_planes, layer_names, input_planes=3):
+    def __init__(self, input_planes=3):
         super().__init__()
 
         # Encoder
