@@ -5,7 +5,6 @@ from glob import glob
 from PIL import Image
 from torch.utils.data import Dataset
 from torchvision.transforms import transforms
-from ..render import DepthRenderer
 from kaolin.rep import TriangleMesh
 from config import *
 
@@ -22,6 +21,7 @@ class ACDMixDataset(Dataset):
     def __init__(self, dataset_path):
         self.dataset_path = dataset_path
         self.image_paths = sorted(glob(self.dataset_path + '/img_*.png'))
+        self.depth_paths = sorted(glob(self.dataset_path + '/depth/depth_*.png'))
         self.obj_paths = sorted(glob(self.dataset_path + '/mesh_*.obj'))
         self.meta_paths = sorted(glob(self.dataset_path + '/meta_*.json'))
 
@@ -30,10 +30,10 @@ class ACDMixDataset(Dataset):
 
     def __getitem__(self, item):
         rgb, silhouette, angle = self.load_img(self.image_paths[item])
+        depth = self.load_depth(self.depth_paths[item])
 
         mesh = self.load_mesh(self.obj_paths[item])
         points = self.sample_points(mesh)
-        depth = DepthRenderer.render_depth(mesh)
 
         dist, elev, azim = self.load_meta(self.meta_paths[item])
         return {
@@ -61,6 +61,10 @@ class ACDMixDataset(Dataset):
             rgb = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])(rgb)
 
         return rgb, silhouette, angle
+
+    @staticmethod
+    def load_depth(depth_path: str):
+        return transforms.ToTensor()(Image.open(depth_path))
 
     @staticmethod
     def rotate_img(img: torch.Tensor) -> (torch.Tensor, float):
