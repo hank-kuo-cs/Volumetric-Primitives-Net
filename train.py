@@ -385,7 +385,7 @@ def train_acdmix(args):
     train_dataloader = DataLoader(dataset=train_dataset, batch_size=BATCH_SIZE, shuffle=True, num_workers=16)
     dir_path, checkpoint_path = set_file_path()
 
-    vpn, den = load_model(args.pre_vpn, args.pre_den)
+    vpn, den = load_model(args.pretrain_vpn, args.pretrain_den)
     optimizer = load_optimizer(vpn, den)
 
     cd_loss_func = ChamferDistanceLoss()
@@ -418,7 +418,7 @@ def train_acdmix(args):
             vp_div_loss = calculate_vp_div_loss(translates, points) * L_VP_DIV
             emd_loss = calculate_emd_loss(predict_points, points) * L_EMD
 
-            depth_loss = l1_loss_func(predict_depths, depths)
+            depth_loss = l1_loss_func(predict_depths, depths) * L_DEPTH
 
             total_loss = cd_loss + vp_div_loss + emd_loss + depth_loss
 
