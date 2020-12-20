@@ -85,7 +85,7 @@ def load_model(pretrain_vpn_path: str, pretrain_den_path: str):
         print('Fix volume weight...')
         vpn.fix_volume_weight()
 
-    return vpn
+    return vpn, den
 
 
 def load_optimizer(vpn, den):
