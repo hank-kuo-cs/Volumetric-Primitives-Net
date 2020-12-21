@@ -4,6 +4,7 @@ import torch
 from tqdm import tqdm
 from glob import glob
 from PIL import Image
+from ..render import DepthRenderer
 from torch.utils.data import Dataset
 from torchvision.transforms import transforms
 from kaolin.rep import TriangleMesh
@@ -40,7 +41,10 @@ class ShapeNetDataset(Dataset):
         rgb, silhouette, rotate_angle = self._load_rgb_and_silhouette(shapenet_data.img_path)
 
         canonical_points = self._load_sample_points(shapenet_data.canonical_obj_path)
-        view_center_points = self._load_sample_points(shapenet_data.view_center_obj_path)
+
+        mesh = self._load_mesh(shapenet_data.view_center_obj_path)
+        view_center_points = mesh.sample(2048)[0]
+        depth = DepthRenderer.render_depth(mesh)
 
         if IS_DIST_INVARIANT:
             view_center_points *= dist
@@ -52,6 +56,7 @@ class ShapeNetDataset(Dataset):
             'view_center_points': view_center_points,
             'class_index': shapenet_data.class_index,
             'rotate_angle': rotate_angle,
+            'depth': depth,
             'dist': dist,
             'elev': elev,
             'azim': azim
