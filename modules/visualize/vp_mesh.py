@@ -11,8 +11,9 @@ COLORS = torch.tensor([[0.0, 0.99, 0.0], [0.0, 0.0, 0.99], [0.99, 0.0, 0.0], [0.
                        [0.2, 0.1, 0.3], [0.4, 0.6, 0.5], [0.9, 0.9, 0.8], [0.7, 0.99, 0.99]])
 
 
-def visualize_vp_meshes_with_gif(image: torch.Tensor, vp_meshes: list, save_name: str, dist=2.0, is_three_elev=False):
+def visualize_vp_meshes_with_gif(image: torch.Tensor, depth: torch.Tensor, vp_meshes: list, save_name: str, dist=2.0, is_three_elev=False):
     image = to_pil(image.cpu()).resize((256, 256), Image.BILINEAR)
+    depth = to_pil(depth.detach().cpu()).resize((256, 256), Image.BILINEAR)
     colors = get_colors_of_vps(vp_meshes)
     mesh = compose_vp_meshes(vp_meshes)
 
@@ -23,7 +24,7 @@ def visualize_vp_meshes_with_gif(image: torch.Tensor, vp_meshes: list, save_name
     gif_imgs = []
     render_img_direct_pose = render(vertices, faces, colors, dist, 0, 0)
     for azim in range(0, 360, 30):
-        imgs = [image, render_img_direct_pose]
+        imgs = [image, depth, render_img_direct_pose]
         for elev in elevs:
             imgs.append(render(vertices, faces, colors, dist, elev, azim))
 

@@ -142,8 +142,7 @@ def test(args):
         predict_depth = predict_depths[0]
         vp_meshes = batch_vp_meshes[0]
 
-        Visualizer.render_vp_meshes(img, vp_meshes, os.path.join(dir_path, 'epoch%d-%d.png' % (epoch, n // 3)), SHOW_DIST)
-        Visualizer.save_depth_imgs(predict_depth, depth, os.path.join(dir_path, 'depth', 'epoch%d-%d.png' % (epoch, n // 3)))
+        Visualizer.render_vp_meshes(img, predict_depth, vp_meshes, os.path.join(dir_path, 'epoch%d-%d.png' % (epoch, n // 3)), SHOW_DIST)
 
     avg_cd_loss /= n
     print('\nEpoch %d\n============================' % epoch)
