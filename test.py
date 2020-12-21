@@ -108,7 +108,7 @@ def test(args):
         # dists, elevs, azims = data['dist'].float().to(DEVICE), data['elev'].float().to(DEVICE), data['azim'].float().to(DEVICE)
 
         predict_depths = den(rgbs)
-        volumes, rotates, translates, features = vpn(predict_depths)
+        volumes, rotates, translates, local_features, global_features = vpn(predict_depths)
         predict_points = []
 
         for i in range(vp_num):
