@@ -5,7 +5,7 @@ import torch
 import argparse
 from tqdm import tqdm
 from torch.utils.data import DataLoader
-from modules.network import VPNetOneRes, VPNetTwoRes
+from modules.network import VPNetOneRes, VPNetTwoRes, DepthEstimationNet
 from modules.sampling import Sampling
 from modules.loss import ChamferDistanceLoss
 from modules.meshing import Meshing
@@ -45,16 +45,26 @@ def load_dataset(is_unseen: bool):
     return test_dataloader
 
 
-def load_model(pretrain_model_path):
-    model = VPNetOneRes() if BACKBONE == 'vpnet_oneres' else VPNetTwoRes()
-    model = model.to(DEVICE)
-    model.load_state_dict(torch.load(pretrain_model_path))
-    return model
+def load_model(pretrain_vpn_path, pretrain_den_path):
+    vpn = VPNetOneRes() if BACKBONE == 'vpnet_oneres' else VPNetTwoRes()
+    vpn = vpn.to(DEVICE)
+    vpn.load_state_dict(torch.load(pretrain_vpn_path))
+
+    den = DepthEstimationNet()
+    den = den.to(DEVICE)
+    den.load_state_dict(torch.load(pretrain_den_path))
+
+    return vpn, den
 
 
 def get_model_path(epoch):
     checkpoint_path = os.path.join(EXPERIMENT_PATH, 'checkpoint')
-    return os.path.join(checkpoint_path, 'model_epoch%03d.pth' % epoch)
+    depth_checkpoint_path = os.path.join(checkpoint_path, 'depth')
+
+    vpn_path = os.path.join(checkpoint_path, 'model_epoch%03d.pth' % epoch)
+    den_path = os.path.join(depth_checkpoint_path, 'model_epoch%03d.pth' % epoch)
+
+    return vpn_path, den_path
 
 
 def set_save_path(is_unseen=False):
@@ -65,6 +75,7 @@ def set_save_path(is_unseen=False):
 
     dir_path = os.path.join(EXPERIMENT_PATH, 'test', classes_str)
     os.makedirs(dir_path, exist_ok=True)
+    os.makedirs(os.path.join(dir_path, 'depth'), exist_ok=True)
 
     return dir_path
 
@@ -75,13 +86,15 @@ def test(args):
     is_unseen = args.is_unseen
     dir_path = set_save_path(is_unseen)
     test_dataloader = load_dataset(is_unseen)
-    model_path = get_model_path(epoch)
-    model = load_model(model_path)
+
+    vpn_path, den_path = get_model_path(epoch)
+    vpn, den = load_model(vpn_path, den_path)
 
     cd_loss_func = ChamferDistanceLoss()
     vp_num = CUBOID_NUM + SPHERE_NUM + CONE_NUM
 
-    model.eval()
+    vpn.eval()
+    den.eval()
 
     progress_bar = tqdm(test_dataloader)
     avg_cd_loss, n = 0.0, 0
@@ -89,12 +102,13 @@ def test(args):
     class_ns = [0 for i in range(len(class_names))]
 
     for data in progress_bar:
-        rgbs, silhouettes = data['rgb'].to(DEVICE), data['silhouette'].to(DEVICE)
+        rgbs, silhouettes, depths = data['rgb'].to(DEVICE), data['silhouette'].to(DEVICE), data['depth'].to(DEVICE)
         canonical_points, view_points = data['canonical_points'].to(DEVICE), data['view_center_points'].to(DEVICE)
         class_indices = data['class_index']
         # dists, elevs, azims = data['dist'].float().to(DEVICE), data['elev'].float().to(DEVICE), data['azim'].float().to(DEVICE)
 
-        volumes, rotates, translates, features = model(rgbs)
+        predict_depths = den(rgbs)
+        volumes, rotates, translates, features = vpn(predict_depths)
         predict_points = []
 
         for i in range(vp_num):
@@ -124,8 +138,12 @@ def test(args):
                 batch_vp_meshes[b].append(meshing(volumes[i], rotates[i], translates[i])[b])
 
         img = rgbs[0]
+        depth = depths[0]
+        predict_depth = predict_depths[0]
         vp_meshes = batch_vp_meshes[0]
+
         Visualizer.render_vp_meshes(img, vp_meshes, os.path.join(dir_path, 'epoch%d-%d.png' % (epoch, n // 3)), SHOW_DIST)
+        Visualizer.save_depth_imgs(predict_depth, depth, os.path.join(dir_path, 'depth', 'epoch%d-%d.png' % (epoch, n // 3)))
 
     avg_cd_loss /= n
     print('\nEpoch %d\n============================' % epoch)
